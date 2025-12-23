@@ -317,14 +317,58 @@ pytest tests/test_api.py -v
 
 ## 📊 MLflow Experiment Tracking
 
-After training, view experiments:
+### View Experiments
+
+After training models, view experiments in MLflow UI:
 
 ```bash
 # Start MLflow UI
 mlflow ui --backend-store-uri mlruns
 
+# Or use Makefile shortcut
+make mlflow-ui
+
 # Open browser: http://localhost:5000
+# Or if accessing remotely: http://0.0.0.0:5000
 ```
+
+### Troubleshooting Empty MLflow UI
+
+If MLflow UI shows an empty page, it means **no experiments have been logged yet**. Follow these steps:
+
+1. **Train the models first** (this creates MLflow runs):
+   ```bash
+   make train
+   # or
+   python scripts/train.py
+   ```
+
+2. **Verify MLflow runs were created**:
+   ```bash
+   # Check if mlruns directory exists and has data
+   ls -la mlruns/
+   
+   # Should see directories like: 0/, 1/, etc. (experiment IDs)
+   ```
+
+3. **Start MLflow UI from the project root**:
+   ```bash
+   cd ~/Documents/mlops-assignment-1/heart-disease-mlops
+   mlflow ui --backend-store-uri mlruns --host 0.0.0.0 --port 5000
+   ```
+
+4. **Access from browser**:
+   - Local: `http://localhost:5000`
+   - Remote: `http://YOUR_SERVER_IP:5000`
+
+### What You'll See After Training
+
+Once models are trained, MLflow UI will show:
+- **Experiments**: "heart-disease-classification"
+- **Runs**: One for each model (Logistic Regression, Random Forest)
+- **Metrics**: Accuracy, Precision, Recall, F1, ROC-AUC
+- **Parameters**: Model hyperparameters
+- **Artifacts**: ROC curves, confusion matrices, feature importance plots
 
 ## 📈 API Endpoints
 
