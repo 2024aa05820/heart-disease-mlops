@@ -1,0 +1,74 @@
+# Heart Disease MLOps Configuration
+
+# Data paths
+data:
+  raw_path: "data/raw/heart.csv"
+  processed_path: "data/processed/heart_processed.csv"
+  test_size: 0.2
+  random_state: 42
+
+# Feature configuration
+features:
+  # Numerical features to scale
+  numerical:
+    - age
+    - trestbps
+    - chol
+    - thalach
+    - oldpeak
+
+  # Categorical features to encode
+  categorical:
+    - sex
+    - cp
+    - fbs
+    - restecg
+    - exang
+    - slope
+    - ca
+    - thal
+
+  # Target column
+  target: "target"
+
+# Model configuration
+model:
+  # Models to train and compare
+  models_to_train:
+    - logistic_regression
+    - random_forest
+
+  # Logistic Regression hyperparameters
+  logistic_regression:
+    C: 1.0
+    max_iter: 1000
+    random_state: 42
+
+  # Random Forest hyperparameters
+  random_forest:
+    n_estimators: 100
+    max_depth: 10
+    min_samples_split: 5
+    random_state: 42
+
+  # Cross-validation
+  cv_folds: 5
+
+# MLflow configuration
+mlflow:
+  tracking_uri: "mlruns"
+  experiment_name: "heart-disease-classification"
+
+# API configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  model_path: "models/best_model.joblib"
+  pipeline_path: "models/preprocessing_pipeline.joblib"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+
