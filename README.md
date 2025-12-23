@@ -88,10 +88,69 @@ heart-disease-mlops/
 - Docker
 - (Optional) Minikube or Kubernetes cluster
 
-### 1. Setup Environment
+### Initial Setup (Rocky Linux / RHEL / CentOS)
+
+#### Step 1: Check Python Version & Install Dependencies
+
+Run these commands on your Linux box:
 
 ```bash
-# Clone repository
+# Check Python version (need 3.11+)
+python3 --version
+
+# If Python 3.11 is not installed, install it:
+sudo dnf install python3.11 python3.11-pip python3.11-devel -y
+
+# Install make if not present
+sudo dnf install make -y
+
+# Install git if not present (you likely have it since you cloned)
+sudo dnf install git -y
+```
+
+#### Step 2: Navigate to Project & Setup Virtual Environment
+
+```bash
+# Go to project directory
+cd ~/Documents/mlops-assignment-1/heart-disease-mlops
+
+# Create virtual environment
+python3 -m venv .venv
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+**Or use the Makefile shortcut:**
+
+```bash
+make init
+source .venv/bin/activate
+```
+
+#### Alternative: Using Conda (Recommended for ML Projects)
+
+```bash
+# Create conda environment
+make init-conda
+
+# Activate conda environment
+conda activate heart-mlops
+
+# Install dependencies
+make install
+```
+
+### 1. Setup Environment (After Initial Setup)
+
+```bash
+# Clone repository (if not already done)
 git clone https://github.com/YOUR_USERNAME/heart-disease-mlops.git
 cd heart-disease-mlops
 
