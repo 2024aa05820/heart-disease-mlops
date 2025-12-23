@@ -271,8 +271,11 @@ minikube start
 # Load Docker image into Minikube
 minikube image load heart-disease-api:latest
 
-# Deploy
+# Deploy (use kubectl directly if installed)
 kubectl apply -f deploy/k8s/
+
+# If kubectl is not installed separately, use minikube kubectl with -- separator:
+# minikube kubectl -- apply -f deploy/k8s/
 
 # Check status
 kubectl get pods
@@ -280,6 +283,13 @@ kubectl get services
 
 # Access API (port-forward)
 kubectl port-forward service/heart-disease-api-service 8000:80
+```
+
+**Note:** If you don't have `kubectl` installed separately, you can use `minikube kubectl` with the `--` separator:
+```bash
+minikube kubectl -- apply -f deploy/k8s/
+minikube kubectl -- get pods
+minikube kubectl -- get services
 ```
 
 ### Alternative: Using Docker Desktop Kubernetes (if available)
