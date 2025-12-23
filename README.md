@@ -219,6 +219,49 @@ docker run -p 8000:8000 heart-disease-api:latest
 
 ## ☸️ Kubernetes Deployment
 
+### Installing kubectl on Rocky Linux / RHEL / CentOS
+
+```bash
+# Install kubectl
+# Method 1: Using dnf/yum (if available in repos)
+sudo dnf install -y kubectl
+
+# Method 2: Manual installation (recommended)
+# Download kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+# Make it executable
+chmod +x kubectl
+
+# Move to PATH
+sudo mv kubectl /usr/local/bin/
+
+# Verify installation
+kubectl version --client
+```
+
+### Installing Minikube on Rocky Linux
+
+```bash
+# Download Minikube
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+
+# Install Minikube
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+# Verify installation
+minikube version
+
+# Install Docker (required for Minikube)
+sudo dnf install -y docker
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker $USER
+
+# Log out and log back in for group changes to take effect
+# Or run: newgrp docker
+```
+
 ### Using Minikube
 
 ```bash
@@ -237,6 +280,16 @@ kubectl get services
 
 # Access API (port-forward)
 kubectl port-forward service/heart-disease-api-service 8000:80
+```
+
+### Alternative: Using Docker Desktop Kubernetes (if available)
+
+If you have Docker Desktop with Kubernetes enabled:
+
+```bash
+# Enable Kubernetes in Docker Desktop settings
+# Then deploy directly:
+kubectl apply -f deploy/k8s/
 ```
 
 ## 🧪 Testing
