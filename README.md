@@ -107,14 +107,15 @@ heart-disease-mlops/
 - Minikube (for Kubernetes deployment)
 - MLflow (for experiment tracking)
 
-### 🎯 Four Deployment Options
+### 🎯 Five Deployment Options
 
 **Choose your deployment method:**
 
 1. **Rebuild on Remote** ⭐ RECOMMENDED - Simplest, 5 minutes
 2. **GitHub Artifact** - Use CI/CD built image
 3. **Docker Registry** - Production-ready with Docker Hub
-4. **Jenkins CI/CD** 🚀 NEW - Automated deployment with webhooks
+4. **Jenkins CI/CD** 🚀 - Full automation (build + deploy)
+5. **Hybrid (GitHub + Jenkins)** 🔥 NEW - Best of both worlds!
 
 **See:** [DEPLOYMENT_SOLUTION_SUMMARY.md](DEPLOYMENT_SOLUTION_SUMMARY.md) for detailed comparison.
 
@@ -445,6 +446,33 @@ sudo systemctl restart jenkins
 
 **See:** [JENKINS_SETUP_GUIDE.md](JENKINS_SETUP_GUIDE.md) for complete instructions.
 
+### 🔥 Hybrid: GitHub Actions + Jenkins
+
+**Best of both worlds - GitHub builds, Jenkins deploys!**
+
+**How it works:**
+1. Push code → GitHub Actions builds Docker image
+2. Jenkins downloads artifact from GitHub
+3. Jenkins deploys to Minikube
+
+**Benefits:**
+- ✅ Fast cloud builds (GitHub runners)
+- ✅ Controlled deployment (your server)
+- ✅ Free (GitHub's CI/CD minutes)
+- ✅ Production-like pattern
+
+**Quick Setup:**
+```bash
+# Install jq
+sudo dnf install jq -y
+
+# Add GitHub token to Jenkins (ID: github-token)
+# Create pipeline with Script Path: Jenkinsfile.hybrid
+# Push code → Auto-deploy! 🚀
+```
+
+**See:** [JENKINS_HYBRID_DEPLOYMENT.md](JENKINS_HYBRID_DEPLOYMENT.md) for complete guide.
+
 ## 📈 API Endpoints
 
 | Endpoint | Method | Description |
@@ -489,9 +517,10 @@ Edit `src/config/config.yaml` to customize:
 | Document | Purpose | Use When |
 |----------|---------|----------|
 | **[README.md](README.md)** | Main project documentation | Overview and getting started |
-| **[DEPLOYMENT_SOLUTION_SUMMARY.md](DEPLOYMENT_SOLUTION_SUMMARY.md)** | Overview of all 4 deployment methods | Start here - choose your method |
+| **[DEPLOYMENT_SOLUTION_SUMMARY.md](DEPLOYMENT_SOLUTION_SUMMARY.md)** | Overview of all 5 deployment methods | Start here - choose your method |
 | **[GITHUB_TO_REMOTE_DEPLOYMENT.md](GITHUB_TO_REMOTE_DEPLOYMENT.md)** | GitHub artifact deployment | Using CI/CD built images |
-| **[JENKINS_SETUP_GUIDE.md](JENKINS_SETUP_GUIDE.md)** | Jenkins CI/CD setup | Automated deployment with webhooks |
+| **[JENKINS_SETUP_GUIDE.md](JENKINS_SETUP_GUIDE.md)** | Jenkins CI/CD setup | Full automation with Jenkins |
+| **[JENKINS_HYBRID_DEPLOYMENT.md](JENKINS_HYBRID_DEPLOYMENT.md)** | Hybrid GitHub + Jenkins | Best of both worlds! |
 | **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** | Quick command reference | Fast lookup of commands |
 
 ### Available Scripts
@@ -501,6 +530,7 @@ Edit `src/config/config.yaml` to customize:
 | `scripts/remote_quick_deploy.sh` | Full automated deployment | `./scripts/remote_quick_deploy.sh` |
 | `scripts/deploy_to_minikube.sh` | Deploy to Kubernetes | `./scripts/deploy_to_minikube.sh` |
 | `scripts/deploy_github_artifact.sh` | Deploy GitHub artifact | `./scripts/deploy_github_artifact.sh ~/docker-image.tar.gz` |
+| `scripts/download_github_artifact.sh` | Download GitHub artifact | `./scripts/download_github_artifact.sh` |
 | `scripts/jenkins_deploy.sh` | Jenkins deployment helper | `./scripts/jenkins_deploy.sh latest` |
 | `scripts/start_mlflow_ui.sh` | Manage MLflow UI | `./scripts/start_mlflow_ui.sh --background` |
 

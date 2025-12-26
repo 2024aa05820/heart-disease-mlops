@@ -22,14 +22,15 @@ git pull origin main
 
 ---
 
-## 🎯 Four Deployment Methods
+## 🎯 Five Deployment Methods
 
 | Method | Time | Commands | Best For |
 |--------|------|----------|----------|
 | **1. Rebuild** ⭐ | 5 min | 3 | Quick/Assignment |
 | **2. Artifact** | 10 min | 6 | CI/CD Learning |
 | **3. Registry** | 15 min | 4 | Production |
-| **4. Jenkins** 🚀 | Auto | 0 | Automated CI/CD |
+| **4. Jenkins** 🚀 | Auto | 0 | Full Automation |
+| **5. Hybrid** 🔥 | Auto | 0 | Best of Both! |
 
 ---
 
@@ -221,9 +222,10 @@ curl http://localhost:5001
 | Document | Purpose |
 |----------|---------|
 | **README.md** | Main project documentation |
-| **DEPLOYMENT_SOLUTION_SUMMARY.md** | Deployment overview |
+| **DEPLOYMENT_SOLUTION_SUMMARY.md** | Deployment overview (5 methods) |
 | **GITHUB_TO_REMOTE_DEPLOYMENT.md** | GitHub artifact guide |
 | **JENKINS_SETUP_GUIDE.md** | Jenkins CI/CD setup |
+| **JENKINS_HYBRID_DEPLOYMENT.md** | Hybrid GitHub + Jenkins 🔥 |
 | **QUICK_REFERENCE.md** | This quick reference |
 
 ---
@@ -264,16 +266,29 @@ ssh user@remote "cd ~/Documents/mlops-assignment-1/heart-disease-mlops && ./scri
 ssh user@remote "docker pull username/heart-disease-api:latest && minikube image load username/heart-disease-api:latest && cd ~/Documents/mlops-assignment-1/heart-disease-mlops && kubectl apply -f deploy/k8s/"
 ```
 
-### **Method 4: Jenkins (Automated)**
+### **Method 4: Jenkins (Full Automation)**
 ```bash
 # One-time setup (see JENKINS_SETUP_GUIDE.md)
 # 1. Install Jenkins
 # 2. Configure GitHub webhook
-# 3. Create pipeline job
+# 3. Create pipeline job (Script: Jenkinsfile)
 
 # Then just push code:
 git push origin main
 # Jenkins automatically builds and deploys! 🚀
+```
+
+### **Method 5: Hybrid (GitHub + Jenkins)** 🔥
+```bash
+# One-time setup (see JENKINS_HYBRID_DEPLOYMENT.md)
+# 1. Install jq: sudo dnf install jq -y
+# 2. Add GitHub token to Jenkins (ID: github-token)
+# 3. Create pipeline job (Script: Jenkinsfile.hybrid)
+
+# Then just push code:
+git push origin main
+# GitHub Actions builds → Jenkins deploys! 🚀
+# Best of both worlds!
 ```
 
 ---

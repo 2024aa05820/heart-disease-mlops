@@ -1,0 +1,189 @@
+pipeline {
+    agent any
+    
+    environment {
+        GITHUB_REPO = '2024aa05820/heart-disease-mlops'
+        ARTIFACT_NAME = 'docker-image'
+        IMAGE_NAME = 'heart-disease-api'
+        IMAGE_TAG = 'latest'
+        MINIKUBE_HOME = '/var/lib/jenkins/.minikube'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📥 Checking out code from GitHub...'
+                checkout scm
+                sh 'git log -1 --pretty=format:"%h - %an: %s"'
+            }
+        }
+        
+        stage('Get Latest GitHub Actions Run') {
+            steps {
+                echo '🔍 Finding latest successful GitHub Actions run...'
+                script {
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
+                            # Get latest successful workflow run
+                            RUN_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                                "https://api.github.com/repos/${GITHUB_REPO}/actions/runs?status=success&per_page=1" \
+                                | jq -r '.workflow_runs[0].id')
+                            
+                            echo "Latest successful run ID: $RUN_ID"
+                            echo "$RUN_ID" > run_id.txt
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Download Docker Image Artifact') {
+            steps {
+                echo '📦 Downloading Docker image from GitHub Actions...'
+                script {
+                    withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        sh '''
+                            RUN_ID=$(cat run_id.txt)
+                            
+                            # Get artifact download URL
+                            ARTIFACT_URL=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                                "https://api.github.com/repos/${GITHUB_REPO}/actions/runs/$RUN_ID/artifacts" \
+                                | jq -r ".artifacts[] | select(.name==\"${ARTIFACT_NAME}\") | .archive_download_url")
+                            
+                            echo "Artifact URL: $ARTIFACT_URL"
+                            
+                            # Download artifact
+                            curl -L -H "Authorization: token $GITHUB_TOKEN" \
+                                -o docker-image.zip "$ARTIFACT_URL"
+                            
+                            # Extract artifact
+                            unzip -o docker-image.zip
+                            
+                            # Verify file exists
+                            ls -lh docker-image.tar.gz
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Load Docker Image') {
+            steps {
+                echo '🐳 Loading Docker image...'
+                sh '''
+                    # Load image into Docker
+                    docker load -i docker-image.tar.gz
+                    
+                    # Verify image loaded
+                    docker images | grep ${IMAGE_NAME}
+                '''
+            }
+        }
+        
+        stage('Load Image to Minikube') {
+            steps {
+                echo '📦 Loading image into Minikube...'
+                sh """
+                    minikube image load ${IMAGE_NAME}:${IMAGE_TAG}
+                    minikube image ls | grep ${IMAGE_NAME}
+                """
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo '🚀 Deploying to Kubernetes...'
+                sh '''
+                    # Apply Kubernetes manifests
+                    kubectl apply -f deploy/k8s/
+                    
+                    # Wait for deployment to be ready
+                    kubectl wait --for=condition=available --timeout=300s deployment/heart-disease-api || true
+                    
+                    # Restart deployment to use new image
+                    kubectl rollout restart deployment/heart-disease-api
+                    kubectl rollout status deployment/heart-disease-api
+                '''
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                echo '✅ Verifying deployment...'
+                sh '''
+                    # Check pods
+                    kubectl get pods -l app=heart-disease-api
+                    
+                    # Get service URL
+                    SERVICE_URL=$(minikube service heart-disease-api-service --url)
+                    echo "Service URL: $SERVICE_URL"
+                    
+                    # Wait for pods to be ready
+                    sleep 10
+                    
+                    # Test health endpoint
+                    curl -f $SERVICE_URL/health || echo "Health check failed, but continuing..."
+                '''
+            }
+        }
+        
+        stage('Start MLflow UI') {
+            steps {
+                echo '📊 Starting MLflow UI...'
+                sh '''
+                    # Check if MLflow is already running
+                    if pgrep -f "mlflow ui" > /dev/null; then
+                        echo "MLflow UI is already running"
+                    else
+                        # Start MLflow UI in background
+                        nohup mlflow ui --host 0.0.0.0 --port 5001 > mlflow.log 2>&1 &
+                        echo "MLflow UI started"
+                    fi
+                '''
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Hybrid deployment completed successfully!'
+            sh '''
+                echo "========================================="
+                echo "Hybrid Deployment Summary"
+                echo "========================================="
+                echo "Build Number: ${BUILD_NUMBER}"
+                echo "Image Source: GitHub Actions"
+                echo "Deployed by: Jenkins"
+                echo ""
+                echo "Kubernetes Pods:"
+                kubectl get pods -l app=heart-disease-api
+                echo ""
+                echo "Service URL:"
+                minikube service heart-disease-api-service --url
+                echo ""
+                echo "MLflow UI: http://$(hostname -I | awk '{print $1}'):5001"
+                echo "========================================="
+            '''
+        }
+        failure {
+            echo '❌ Hybrid deployment failed!'
+            sh '''
+                echo "Check logs for errors:"
+                echo "- Jenkins console output"
+                echo "- GitHub Actions workflow logs"
+                echo "- Kubernetes logs: kubectl logs <pod-name>"
+            '''
+        }
+        always {
+            echo '🧹 Cleaning up...'
+            sh '''
+                # Clean up downloaded files
+                rm -f docker-image.zip docker-image.tar.gz run_id.txt || true
+                
+                # Clean up old Docker images (keep last 5)
+                docker images ${IMAGE_NAME} --format "{{.ID}}" | tail -n +6 | xargs -r docker rmi || true
+            '''
+        }
+    }
+}
+
