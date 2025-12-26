@@ -334,32 +334,31 @@ make mlflow-ui
 
 ### Troubleshooting Empty MLflow UI
 
-If MLflow UI shows an empty page, it means **no experiments have been logged yet**. Follow these steps:
+If MLflow UI shows an empty page, it means **no experiments have been logged yet**.
 
-1. **Train the models first** (this creates MLflow runs):
-   ```bash
-   make train
-   # or
-   python scripts/train.py
-   ```
+**SOLUTION: Use the automated setup script:**
 
-2. **Verify MLflow runs were created**:
-   ```bash
-   # Check if mlruns directory exists and has data
-   ls -la mlruns/
-   
-   # Should see directories like: 0/, 1/, etc. (experiment IDs)
-   ```
+```bash
+# One-command fix (downloads data + trains models + verifies)
+bash scripts/setup_mlflow.sh
 
-3. **Start MLflow UI from the project root**:
-   ```bash
-   cd ~/Documents/mlops-assignment-1/heart-disease-mlops
-   mlflow ui --backend-store-uri mlruns --host 0.0.0.0 --port 5000
-   ```
+# Or manually:
+python scripts/download_data.py  # Step 1: Download dataset
+python scripts/train.py          # Step 2: Train models (creates MLflow runs)
+python scripts/check_mlflow_status.py  # Step 3: Verify everything worked
+```
 
-4. **Access from browser**:
-   - Local: `http://localhost:5000`
-   - Remote: `http://YOUR_SERVER_IP:5000`
+**Then start MLflow UI:**
+```bash
+mlflow ui --host 0.0.0.0 --port 5000
+```
+
+**Access from browser:**
+- Local: `http://localhost:5000`
+- Remote: `http://YOUR_SERVER_IP:5000`
+- SSH tunnel: `ssh -L 5000:localhost:5000 user@server` then `http://localhost:5000`
+
+**Detailed troubleshooting guide:** See `MLFLOW_SETUP_GUIDE.md`
 
 ### What You'll See After Training
 
