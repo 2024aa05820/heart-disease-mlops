@@ -19,19 +19,19 @@ from src.models.train import train_all_models  # noqa: E402
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train heart disease classification models")
+    parser = argparse.ArgumentParser(
+        description="Train heart disease classification models"
+    )
     parser.add_argument(
         "--config",
         type=str,
         default="src/config/config.yaml",
-        help="Path to configuration file"
+        help="Path to configuration file",
     )
     args = parser.parse_args()
-    
+
     train_all_models(args.config)
 
 
 if __name__ == "__main__":
     main()
-
-

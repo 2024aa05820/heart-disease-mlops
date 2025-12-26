@@ -1,3 +1,1 @@
 # Heart Disease MLOps Project
-
-
