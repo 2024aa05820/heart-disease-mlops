@@ -1,8 +1,26 @@
 # Heart Disease Prediction - MLOps Project
 
-[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/heart-disease-mlops/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/heart-disease-mlops/actions/workflows/ci.yml)
+[![CI/CD Pipeline](https://github.com/2024aa05820/heart-disease-mlops/actions/workflows/ci.yml/badge.svg)](https://github.com/2024aa05820/heart-disease-mlops/actions/workflows/ci.yml)
 
 A production-ready machine learning solution for predicting heart disease risk, built with modern MLOps best practices.
+
+## 🚀 Quick Deployment to Remote Minikube
+
+**Deploy in 5 minutes:**
+
+```bash
+# SSH to your remote machine
+ssh username@your-remote-server-ip
+
+# Navigate to project
+cd ~/Documents/mlops-assignment-1/heart-disease-mlops
+git pull origin main
+
+# Deploy everything (builds, deploys, starts MLflow)
+./scripts/remote_quick_deploy.sh
+```
+
+**See:** [DEPLOYMENT_OPTIONS_SUMMARY.md](DEPLOYMENT_OPTIONS_SUMMARY.md) for all deployment methods.
 
 ## 📋 Project Overview
 
@@ -86,7 +104,26 @@ heart-disease-mlops/
 ### Prerequisites
 - Python 3.11+
 - Docker
-- (Optional) Minikube or Kubernetes cluster
+- Minikube (for Kubernetes deployment)
+- MLflow (for experiment tracking)
+
+### 🎯 Three Deployment Options
+
+**Choose your deployment method:**
+
+1. **Rebuild on Remote** ⭐ RECOMMENDED - Simplest, 5 minutes
+2. **GitHub Artifact** - Use CI/CD built image
+3. **Docker Registry** - Production-ready with Docker Hub
+
+**See:** [DEPLOYMENT_OPTIONS_SUMMARY.md](DEPLOYMENT_OPTIONS_SUMMARY.md) for detailed comparison.
+
+**Quick Deploy (Method 1):**
+```bash
+ssh user@remote
+cd ~/Documents/mlops-assignment-1/heart-disease-mlops
+git pull origin main
+./scripts/remote_quick_deploy.sh
+```
 
 ### Initial Setup (Rocky Linux / RHEL / CentOS)
 
@@ -405,6 +442,36 @@ Edit `src/config/config.yaml` to customize:
 | slope | Slope of peak ST segment | int | 0-2 |
 | ca | Major vessels colored by fluoroscopy | int | 0-4 |
 | thal | Thalassemia | int | 0-3 |
+
+## 📚 Deployment Documentation
+
+### Quick Reference Guides
+
+| Document | Purpose | Use When |
+|----------|---------|----------|
+| **[DEPLOYMENT_OPTIONS_SUMMARY.md](DEPLOYMENT_OPTIONS_SUMMARY.md)** | Overview of all 3 deployment methods | Start here - choose your method |
+| **[STEP_BY_STEP_DEPLOYMENT.md](STEP_BY_STEP_DEPLOYMENT.md)** | Detailed steps for each method | Follow exact deployment steps |
+| **[REMOTE_QUICK_START.md](REMOTE_QUICK_START.md)** | 5-minute quick deployment | Fastest way to deploy |
+| **[GITHUB_TO_REMOTE_DEPLOYMENT.md](GITHUB_TO_REMOTE_DEPLOYMENT.md)** | GitHub artifact deployment | Using CI/CD built images |
+| **[DEPLOYMENT_COMPLETE_GUIDE.md](DEPLOYMENT_COMPLETE_GUIDE.md)** | Comprehensive reference | Troubleshooting & deep dive |
+| **[REMOTE_DEPLOYMENT_GUIDE.md](REMOTE_DEPLOYMENT_GUIDE.md)** | Kubernetes deployment details | Understanding K8s setup |
+
+### Available Scripts
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `scripts/remote_quick_deploy.sh` | Full automated deployment | `./scripts/remote_quick_deploy.sh` |
+| `scripts/deploy_to_minikube.sh` | Deploy to Kubernetes | `./scripts/deploy_to_minikube.sh` |
+| `scripts/deploy_github_artifact.sh` | Deploy GitHub artifact | `./scripts/deploy_github_artifact.sh ~/docker-image.tar.gz` |
+| `scripts/start_mlflow_ui.sh` | Manage MLflow UI | `./scripts/start_mlflow_ui.sh --background` |
+
+### Deployment Methods Comparison
+
+| Method | Time | Complexity | Best For |
+|--------|------|------------|----------|
+| **Rebuild on Remote** | 5 min | ⭐ Easy | Assignments, quick testing |
+| **GitHub Artifact** | 10 min | ⭐⭐ Medium | Learning CI/CD, reproducibility |
+| **Docker Registry** | 15 min | ⭐⭐⭐ Advanced | Production, multiple targets |
 
 ## 📄 License
 
