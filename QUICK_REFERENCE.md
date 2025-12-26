@@ -22,13 +22,14 @@ git pull origin main
 
 ---
 
-## 🎯 Three Deployment Methods
+## 🎯 Four Deployment Methods
 
 | Method | Time | Commands | Best For |
 |--------|------|----------|----------|
 | **1. Rebuild** ⭐ | 5 min | 3 | Quick/Assignment |
 | **2. Artifact** | 10 min | 6 | CI/CD Learning |
 | **3. Registry** | 15 min | 4 | Production |
+| **4. Jenkins** 🚀 | Auto | 0 | Automated CI/CD |
 
 ---
 
@@ -109,6 +110,29 @@ minikube image load heart-disease-api:latest
 
 # List images
 minikube image ls | grep heart-disease
+```
+
+### **Jenkins CI/CD**
+```bash
+# Install Jenkins (one-time)
+sudo dnf install java-17-openjdk jenkins -y
+sudo systemctl start jenkins
+
+# Access Jenkins
+http://remote-ip:8080
+
+# Get initial password
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+# Add jenkins to docker group
+sudo usermod -aG docker jenkins
+sudo systemctl restart jenkins
+
+# Manual trigger (if needed)
+# Go to Jenkins → Job → Build Now
+
+# Automatic trigger
+# Push to GitHub → Webhook → Jenkins builds & deploys
 ```
 
 ---
@@ -196,11 +220,11 @@ curl http://localhost:5001
 
 | Document | Purpose |
 |----------|---------|
-| **DEPLOYMENT_OPTIONS_SUMMARY.md** | Choose deployment method |
-| **STEP_BY_STEP_DEPLOYMENT.md** | Detailed deployment steps |
-| **REMOTE_QUICK_START.md** | 5-minute quick start |
+| **README.md** | Main project documentation |
+| **DEPLOYMENT_SOLUTION_SUMMARY.md** | Deployment overview |
 | **GITHUB_TO_REMOTE_DEPLOYMENT.md** | GitHub artifact guide |
-| **DEPLOYMENT_COMPLETE_GUIDE.md** | Complete reference |
+| **JENKINS_SETUP_GUIDE.md** | Jenkins CI/CD setup |
+| **QUICK_REFERENCE.md** | This quick reference |
 
 ---
 
@@ -238,6 +262,18 @@ ssh user@remote "cd ~/Documents/mlops-assignment-1/heart-disease-mlops && ./scri
 ### **Method 3: Docker Registry**
 ```bash
 ssh user@remote "docker pull username/heart-disease-api:latest && minikube image load username/heart-disease-api:latest && cd ~/Documents/mlops-assignment-1/heart-disease-mlops && kubectl apply -f deploy/k8s/"
+```
+
+### **Method 4: Jenkins (Automated)**
+```bash
+# One-time setup (see JENKINS_SETUP_GUIDE.md)
+# 1. Install Jenkins
+# 2. Configure GitHub webhook
+# 3. Create pipeline job
+
+# Then just push code:
+git push origin main
+# Jenkins automatically builds and deploys! 🚀
 ```
 
 ---

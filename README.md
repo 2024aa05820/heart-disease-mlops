@@ -107,15 +107,16 @@ heart-disease-mlops/
 - Minikube (for Kubernetes deployment)
 - MLflow (for experiment tracking)
 
-### 🎯 Three Deployment Options
+### 🎯 Four Deployment Options
 
 **Choose your deployment method:**
 
 1. **Rebuild on Remote** ⭐ RECOMMENDED - Simplest, 5 minutes
 2. **GitHub Artifact** - Use CI/CD built image
 3. **Docker Registry** - Production-ready with Docker Hub
+4. **Jenkins CI/CD** 🚀 NEW - Automated deployment with webhooks
 
-**See:** [DEPLOYMENT_OPTIONS_SUMMARY.md](DEPLOYMENT_OPTIONS_SUMMARY.md) for detailed comparison.
+**See:** [DEPLOYMENT_SOLUTION_SUMMARY.md](DEPLOYMENT_SOLUTION_SUMMARY.md) for detailed comparison.
 
 **Quick Deploy (Method 1):**
 ```bash
@@ -406,6 +407,44 @@ Once models are trained, MLflow UI will show:
 - **Parameters**: Model hyperparameters
 - **Artifacts**: ROC curves, confusion matrices, feature importance plots
 
+## 🤖 Jenkins CI/CD (Automated Deployment)
+
+### Overview
+
+Jenkins provides **fully automated deployment** with GitHub webhooks:
+- ✅ Push code to GitHub → Jenkins automatically builds and deploys
+- ✅ No manual intervention needed
+- ✅ Production-like CI/CD pipeline
+- ✅ Free and open-source
+
+### Quick Setup
+
+**1. Install Jenkins:**
+```bash
+sudo dnf install java-17-openjdk jenkins -y
+sudo systemctl start jenkins
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+# Access: http://remote-ip:8080
+```
+
+**2. Configure:**
+```bash
+sudo usermod -aG docker jenkins
+sudo systemctl restart jenkins
+```
+
+**3. Create Pipeline Job:**
+- Repository: `https://github.com/2024aa05820/heart-disease-mlops.git`
+- Script Path: `Jenkinsfile`
+- Build Triggers: ✅ GitHub hook trigger
+
+**4. Add GitHub Webhook:**
+- URL: `http://remote-ip:8080/github-webhook/`
+
+**5. Push code → Jenkins auto-deploys! 🚀**
+
+**See:** [JENKINS_SETUP_GUIDE.md](JENKINS_SETUP_GUIDE.md) for complete instructions.
+
 ## 📈 API Endpoints
 
 | Endpoint | Method | Description |
@@ -449,12 +488,11 @@ Edit `src/config/config.yaml` to customize:
 
 | Document | Purpose | Use When |
 |----------|---------|----------|
-| **[DEPLOYMENT_OPTIONS_SUMMARY.md](DEPLOYMENT_OPTIONS_SUMMARY.md)** | Overview of all 3 deployment methods | Start here - choose your method |
-| **[STEP_BY_STEP_DEPLOYMENT.md](STEP_BY_STEP_DEPLOYMENT.md)** | Detailed steps for each method | Follow exact deployment steps |
-| **[REMOTE_QUICK_START.md](REMOTE_QUICK_START.md)** | 5-minute quick deployment | Fastest way to deploy |
+| **[README.md](README.md)** | Main project documentation | Overview and getting started |
+| **[DEPLOYMENT_SOLUTION_SUMMARY.md](DEPLOYMENT_SOLUTION_SUMMARY.md)** | Overview of all 4 deployment methods | Start here - choose your method |
 | **[GITHUB_TO_REMOTE_DEPLOYMENT.md](GITHUB_TO_REMOTE_DEPLOYMENT.md)** | GitHub artifact deployment | Using CI/CD built images |
-| **[DEPLOYMENT_COMPLETE_GUIDE.md](DEPLOYMENT_COMPLETE_GUIDE.md)** | Comprehensive reference | Troubleshooting & deep dive |
-| **[REMOTE_DEPLOYMENT_GUIDE.md](REMOTE_DEPLOYMENT_GUIDE.md)** | Kubernetes deployment details | Understanding K8s setup |
+| **[JENKINS_SETUP_GUIDE.md](JENKINS_SETUP_GUIDE.md)** | Jenkins CI/CD setup | Automated deployment with webhooks |
+| **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** | Quick command reference | Fast lookup of commands |
 
 ### Available Scripts
 
@@ -463,6 +501,7 @@ Edit `src/config/config.yaml` to customize:
 | `scripts/remote_quick_deploy.sh` | Full automated deployment | `./scripts/remote_quick_deploy.sh` |
 | `scripts/deploy_to_minikube.sh` | Deploy to Kubernetes | `./scripts/deploy_to_minikube.sh` |
 | `scripts/deploy_github_artifact.sh` | Deploy GitHub artifact | `./scripts/deploy_github_artifact.sh ~/docker-image.tar.gz` |
+| `scripts/jenkins_deploy.sh` | Jenkins deployment helper | `./scripts/jenkins_deploy.sh latest` |
 | `scripts/start_mlflow_ui.sh` | Manage MLflow UI | `./scripts/start_mlflow_ui.sh --background` |
 
 ### Deployment Methods Comparison
