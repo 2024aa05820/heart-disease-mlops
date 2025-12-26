@@ -46,7 +46,7 @@ def download_heart_disease_data():
         "target"     # Heart disease (0 = no disease, 1-4 = disease present)
     ]
     
-    print(f"Downloading Heart Disease dataset from UCI...")
+    print("Downloading Heart Disease dataset from UCI...")
     print(f"URL: {url}")
     
     try:
@@ -100,11 +100,11 @@ def verify_data(filepath: str):
     df = pd.read_csv(filepath)
     print(f"Shape: {df.shape}")
     print(f"Columns: {list(df.columns)}")
-    print(f"\nFirst 5 rows:")
+    print("\nFirst 5 rows:")
     print(df.head())
-    print(f"\nData types:")
+    print("\nData types:")
     print(df.dtypes)
-    print(f"\nMissing values:")
+    print("\nMissing values:")
     print(df.isnull().sum())
     
 

@@ -5,21 +5,19 @@ Trains multiple models, tracks experiments with MLflow,
 and saves the best model.
 """
 
-import os
 import sys
 from pathlib import Path
 from typing import Dict, Any, Tuple
 import warnings
 
 import numpy as np
-import pandas as pd
 import joblib
 import yaml
 import mlflow
 import mlflow.sklearn
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score, cross_val_predict
+from sklearn.model_selection import cross_val_score
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -28,8 +26,7 @@ from sklearn.metrics import (
     roc_auc_score,
     confusion_matrix,
     classification_report,
-    roc_curve,
-    precision_recall_curve
+    roc_curve
 )
 import matplotlib.pyplot as plt
 
@@ -37,7 +34,7 @@ import matplotlib.pyplot as plt
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.data.pipeline import (
+from src.data.pipeline import (  # noqa: E402
     load_config,
     load_data,
     prepare_data,

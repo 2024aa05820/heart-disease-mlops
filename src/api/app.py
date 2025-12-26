@@ -8,7 +8,7 @@ Endpoints:
 - GET /metrics: Prometheus metrics
 """
 
-import os
+import sys
 import time
 import logging
 from datetime import datetime
@@ -17,16 +17,15 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from starlette.responses import Response
 
-import sys
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.models.predict import HeartDiseasePredictor, validate_features, FEATURE_SCHEMA
+from src.models.predict import HeartDiseasePredictor, FEATURE_SCHEMA  # noqa: E402
 
 
 # Configure logging

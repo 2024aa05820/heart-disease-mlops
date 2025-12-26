@@ -6,7 +6,6 @@ This script checks if MLflow experiments exist and provides guidance.
 Run this to diagnose why MLflow UI is empty.
 """
 
-import os
 import sys
 from pathlib import Path
 

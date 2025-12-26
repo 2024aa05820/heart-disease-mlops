@@ -12,7 +12,7 @@ import sys
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.data.pipeline import (
+from src.data.pipeline import (  # noqa: E402
     load_config,
     clean_data,
     get_feature_target_split,

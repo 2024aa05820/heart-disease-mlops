@@ -5,7 +5,6 @@ Provides functions to load the model and make predictions.
 """
 
 import joblib
-import numpy as np
 import pandas as pd
 from pathlib import Path
 from typing import Dict, Union, List

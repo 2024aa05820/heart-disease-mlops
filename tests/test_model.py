@@ -12,11 +12,11 @@ import sys
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression  # noqa: E402
+from sklearn.ensemble import RandomForestClassifier  # noqa: E402
 
-from src.models.train import get_model, evaluate_model
-from src.models.predict import validate_features, FEATURE_SCHEMA
+from src.models.train import get_model, evaluate_model  # noqa: E402
+from src.models.predict import validate_features, FEATURE_SCHEMA  # noqa: E402
 
 
 @pytest.fixture
