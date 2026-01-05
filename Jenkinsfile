@@ -67,6 +67,24 @@ pipeline {
                 sh '''
                     . venv/bin/activate
                     python scripts/train.py
+
+                    # Verify models were created
+                    if [ ! -f "models/best_model.joblib" ]; then
+                        echo "❌ ERROR: best_model.joblib not found!"
+                        echo "Training may have failed. Checking models directory:"
+                        ls -la models/ || echo "models/ directory not found"
+                        exit 1
+                    fi
+
+                    if [ ! -f "models/preprocessing_pipeline.joblib" ]; then
+                        echo "❌ ERROR: preprocessing_pipeline.joblib not found!"
+                        echo "Training may have failed. Checking models directory:"
+                        ls -la models/
+                        exit 1
+                    fi
+
+                    echo "✅ Model files verified:"
+                    ls -lh models/*.joblib
                 '''
             }
         }
@@ -116,18 +134,57 @@ pipeline {
                         exit 1
                     }
 
+                    # Clean up any existing test container
+                    docker rm -f test-api-${BUILD_NUMBER} 2>/dev/null || true
+
                     # Start container
+                    echo "🚀 Starting container test-api-${BUILD_NUMBER}..."
                     docker run -d --name test-api-${BUILD_NUMBER} -p 8001:8000 ${DOCKER_IMAGE}:${IMAGE_TAG}
 
-                    # Wait for container to start
-                    sleep 10
+                    # Check if container is running
+                    echo "📊 Container status:"
+                    docker ps -a | grep test-api-${BUILD_NUMBER}
 
-                    # Test health endpoint
-                    curl -f http://localhost:8001/health || exit 1
+                    # Wait for container to start and show logs
+                    echo "⏳ Waiting 15 seconds for container to start..."
+                    sleep 15
+
+                    # Show container logs
+                    echo "📋 Container logs:"
+                    docker logs test-api-${BUILD_NUMBER}
+
+                    # Check if container is still running
+                    if ! docker ps | grep -q test-api-${BUILD_NUMBER}; then
+                        echo "❌ Container is not running!"
+                        echo "Container logs:"
+                        docker logs test-api-${BUILD_NUMBER}
+                        docker rm -f test-api-${BUILD_NUMBER}
+                        exit 1
+                    fi
+
+                    # Test health endpoint with retries
+                    echo "🏥 Testing health endpoint..."
+                    for i in 1 2 3 4 5; do
+                        echo "Attempt \$i/5..."
+                        if curl -f http://localhost:8001/health; then
+                            echo "✅ Health check passed!"
+                            break
+                        fi
+                        if [ \$i -eq 5 ]; then
+                            echo "❌ Health check failed after 5 attempts"
+                            echo "Container logs:"
+                            docker logs test-api-${BUILD_NUMBER}
+                            docker rm -f test-api-${BUILD_NUMBER}
+                            exit 1
+                        fi
+                        sleep 5
+                    done
 
                     # Stop and remove container
+                    echo "🧹 Cleaning up test container..."
                     docker stop test-api-${BUILD_NUMBER}
                     docker rm test-api-${BUILD_NUMBER}
+                    echo "✅ Docker image test completed successfully!"
                 """
             }
         }
