@@ -298,49 +298,27 @@ pipeline {
             steps {
                 echo '� Deploying to Kubernetes...'
                 sh '''
-                    # Get Minikube IP and API server port
-                    MINIKUBE_IP=$(minikube ip)
-                    API_PORT=8443
+                    # Deploy using minikube ssh to avoid certificate permission issues
+                    # This runs kubectl inside the minikube VM where permissions are not an issue
 
-                    # Create a simple kubeconfig that skips TLS verification
-                    cat > /tmp/jenkins-kubeconfig <<EOF
-apiVersion: v1
-kind: Config
-clusters:
-- cluster:
-    insecure-skip-tls-verify: true
-    server: https://${MINIKUBE_IP}:${API_PORT}
-  name: minikube
-contexts:
-- context:
-    cluster: minikube
-    namespace: default
-    user: minikube
-  name: minikube
-current-context: minikube
-preferences: {}
-users:
-- name: minikube
-  user:
-    client-certificate: /home/cloud/.minikube/profiles/minikube/client.crt
-    client-key: /home/cloud/.minikube/profiles/minikube/client.key
-EOF
+                    # Copy manifests to minikube VM
+                    for file in deploy/k8s/*.yaml; do
+                        minikube ssh "sudo mkdir -p /tmp/k8s-manifests"
+                        cat "$file" | minikube ssh "sudo tee /tmp/k8s-manifests/$(basename $file) > /dev/null"
+                    done
 
-                    # Try to make certs readable
-                    sudo chmod -R a+rX /home/cloud/.minikube/ 2>/dev/null || true
+                    # Apply manifests from inside the VM
+                    minikube ssh "sudo kubectl apply -f /tmp/k8s-manifests/"
 
-                    # Use the new kubeconfig
-                    export KUBECONFIG=/tmp/jenkins-kubeconfig
+                    # Wait for deployment
+                    minikube ssh "sudo kubectl wait --for=condition=available --timeout=300s deployment/heart-disease-api" || true
 
-                    # Apply Kubernetes manifests
-                    kubectl apply -f deploy/k8s/
+                    # Restart deployment
+                    minikube ssh "sudo kubectl rollout restart deployment/heart-disease-api"
+                    minikube ssh "sudo kubectl rollout status deployment/heart-disease-api"
 
-                    # Wait for deployment to be ready
-                    kubectl wait --for=condition=available --timeout=300s deployment/heart-disease-api || true
-
-                    # Restart deployment to use new image
-                    kubectl rollout restart deployment/heart-disease-api
-                    kubectl rollout status deployment/heart-disease-api
+                    # Cleanup
+                    minikube ssh "sudo rm -rf /tmp/k8s-manifests"
                 '''
             }
         }
@@ -349,11 +327,8 @@ EOF
             steps {
                 echo '✅ Verifying deployment...'
                 sh '''
-                    # Use the token-based kubeconfig
-                    export KUBECONFIG=/tmp/jenkins-kubeconfig
-
-                    # Check pods
-                    kubectl get pods -l app=heart-disease-api
+                    # Check pods using minikube ssh
+                    minikube ssh "sudo kubectl get pods -l app=heart-disease-api"
 
                     # Get service URL
                     SERVICE_URL=$(minikube service heart-disease-api-service --url)
@@ -364,9 +339,6 @@ EOF
 
                     # Test health endpoint
                     curl -f $SERVICE_URL/health || echo "Health check failed, but continuing..."
-
-                    # Cleanup
-                    rm -f /tmp/jenkins-kubeconfig
                 '''
             }
         }
