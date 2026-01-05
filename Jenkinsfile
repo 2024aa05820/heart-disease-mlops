@@ -74,8 +74,14 @@ pipeline {
             steps {
                 echo '🐳 Building Docker image...'
                 sh """
+                    # Use Minikube's Docker daemon to build image directly
+                    eval \$(minikube docker-env) || echo "Using local Docker"
+
                     docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .
                     docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest
+
+                    # Verify image was built
+                    docker images | grep ${DOCKER_IMAGE}
                 """
             }
         }
@@ -102,10 +108,25 @@ pipeline {
         
         stage('Load Image to Minikube') {
             steps {
-                echo '📦 Loading image into Minikube...'
+                echo '📦 Verifying image in Minikube...'
                 sh """
-                    minikube image load ${DOCKER_IMAGE}:latest
-                    minikube image ls | grep ${DOCKER_IMAGE}
+                    # Since we built with minikube docker-env, image should already be there
+                    eval \$(minikube docker-env)
+
+                    # Verify image exists in Minikube's Docker
+                    if docker images | grep -q ${DOCKER_IMAGE}; then
+                        echo "✅ Image found in Minikube Docker daemon"
+                        docker images | grep ${DOCKER_IMAGE}
+                    else
+                        echo "⚠️  Image not found, attempting to load..."
+                        # Fallback: try minikube image load
+                        minikube image load ${DOCKER_IMAGE}:latest || {
+                            echo "❌ Failed to load image to Minikube"
+                            echo "Available images in Minikube:"
+                            docker images
+                            exit 1
+                        }
+                    fi
                 """
             }
         }

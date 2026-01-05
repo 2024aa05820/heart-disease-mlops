@@ -72,38 +72,39 @@ else
 fi
 echo ""
 
+# Get the Minikube profile name
+MINIKUBE_PROFILE=$(minikube profile 2>/dev/null || echo "minikube")
+echo -e "${BLUE}Using Minikube profile: $MINIKUBE_PROFILE${NC}"
+echo ""
+
 # Set MINIKUBE_HOME environment variable for Jenkins
 echo -e "${YELLOW}4. Setting environment variables for Jenkins...${NC}"
 JENKINS_ENV_FILE="/etc/systemd/system/jenkins.service.d/override.conf"
 mkdir -p /etc/systemd/system/jenkins.service.d/
 
-cat > $JENKINS_ENV_FILE << 'EOF'
+cat > $JENKINS_ENV_FILE << EOF
 [Service]
 Environment="MINIKUBE_HOME=/var/lib/jenkins/.minikube"
 Environment="KUBECONFIG=/var/lib/jenkins/.kube/config"
+Environment="DOCKER_HOST=unix:///var/run/docker.sock"
+Environment="MINIKUBE_ACTIVE_DOCKERD=$MINIKUBE_PROFILE"
 EOF
 
 echo -e "${GREEN}✅ Environment variables configured${NC}"
 echo ""
 
+# Ensure Jenkins can access Docker socket
+echo -e "${YELLOW}5. Ensuring Jenkins can access Docker socket...${NC}"
+chmod 666 /var/run/docker.sock 2>/dev/null || true
+echo -e "${GREEN}✅ Docker socket permissions set${NC}"
+echo ""
+
 # Restart Jenkins to apply changes
-echo -e "${YELLOW}5. Restarting Jenkins...${NC}"
+echo -e "${YELLOW}6. Restarting Jenkins...${NC}"
 systemctl daemon-reload
 systemctl restart jenkins
 sleep 5
 echo -e "${GREEN}✅ Jenkins restarted${NC}"
-echo ""
-
-# Verify Jenkins can access Minikube
-echo -e "${YELLOW}6. Verifying Jenkins can access Minikube...${NC}"
-sleep 5  # Wait for Jenkins to fully start
-
-if sudo -u jenkins minikube status &> /dev/null; then
-    echo -e "${GREEN}✅ Jenkins can access Minikube!${NC}"
-else
-    echo -e "${YELLOW}⚠️  Verification inconclusive (Jenkins may still be starting)${NC}"
-    echo -e "${YELLOW}   Test manually: sudo -u jenkins minikube status${NC}"
-fi
 echo ""
 
 # Verify Jenkins can access Docker
@@ -114,6 +115,29 @@ else
     echo -e "${RED}❌ Jenkins cannot access Docker${NC}"
     echo -e "${YELLOW}   This should have been fixed during installation${NC}"
     echo -e "${YELLOW}   Try: sudo systemctl restart jenkins${NC}"
+fi
+echo ""
+
+# Verify Jenkins can access Minikube
+echo -e "${YELLOW}8. Verifying Jenkins can access Minikube...${NC}"
+sleep 5  # Wait for Jenkins to fully start
+
+# Test with explicit environment variables
+if sudo -u jenkins bash -c "MINIKUBE_HOME=/var/lib/jenkins/.minikube KUBECONFIG=/var/lib/jenkins/.kube/config minikube status" &> /dev/null; then
+    echo -e "${GREEN}✅ Jenkins can access Minikube!${NC}"
+else
+    echo -e "${YELLOW}⚠️  Direct verification failed, trying alternative method...${NC}"
+
+    # Try using docker context
+    if sudo -u jenkins bash -c "eval \$(minikube docker-env) && docker ps" &> /dev/null; then
+        echo -e "${GREEN}✅ Jenkins can access Minikube via Docker!${NC}"
+    else
+        echo -e "${RED}❌ Jenkins cannot access Minikube${NC}"
+        echo -e "${YELLOW}   Debug commands:${NC}"
+        echo -e "${BLUE}     sudo -u jenkins minikube status${NC}"
+        echo -e "${BLUE}     sudo -u jenkins docker ps${NC}"
+        echo -e "${BLUE}     ls -la /var/lib/jenkins/.minikube${NC}"
+    fi
 fi
 echo ""
 
