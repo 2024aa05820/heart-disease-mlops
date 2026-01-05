@@ -11,6 +11,7 @@ help:
 	@echo "  make rocky-setup   - Install all prerequisites (Java, Docker, k8s, Jenkins)"
 	@echo "  make rocky-start   - Start Minikube and show URLs"
 	@echo "  make rocky-status  - Check status of all services"
+	@echo "  make verify        - Run comprehensive verification"
 	@echo ""
 	@echo "📦 Development:"
 	@echo "  make init-conda    - Create conda environment and install dependencies"
@@ -161,6 +162,10 @@ rocky-status:
 	@echo ""
 	@echo "Kubernetes Pods:"
 	@kubectl get pods 2>/dev/null || echo "No pods running"
+
+verify:
+	@echo "🔍 Running comprehensive verification..."
+	@./scripts/verify-installation.sh
 
 urls:
 	@echo "============================================"
