@@ -298,8 +298,8 @@ pipeline {
             steps {
                 echo '🚀 Deploying to Kubernetes...'
                 sh '''
-                    # Fix certificate permissions
-                    sudo chmod -R a+r /home/cloud/.minikube/ 2>/dev/null || true
+                    # Set up kubectl to use insecure connection (skip TLS verification)
+                    kubectl config set-cluster minikube --insecure-skip-tls-verify=true
 
                     # Apply Kubernetes manifests
                     kubectl apply -f deploy/k8s/
