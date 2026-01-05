@@ -172,10 +172,19 @@ pipeline {
                     echo "🏥 Testing health endpoint..."
                     for i in 1 2 3 4 5; do
                         echo "Attempt \$i/5..."
-                        if curl -f http://localhost:8001/health; then
+
+                        # Try to curl and show detailed output
+                        HTTP_CODE=\$(curl -s -o /tmp/health_response.txt -w "%{http_code}" http://localhost:8001/health)
+                        echo "HTTP Status Code: \$HTTP_CODE"
+                        echo "Response body:"
+                        cat /tmp/health_response.txt
+                        echo ""
+
+                        if [ "\$HTTP_CODE" = "200" ]; then
                             echo "✅ Health check passed!"
                             break
                         fi
+
                         if [ \$i -eq 5 ]; then
                             echo "❌ Health check failed after 5 attempts"
                             echo "Container logs:"
