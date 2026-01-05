@@ -65,21 +65,40 @@ pipeline {
             steps {
                 echo '🤖 Training ML models...'
                 sh '''
+                    set -e  # Exit on any error
+
+                    echo "📂 Current directory: $(pwd)"
+                    echo "📂 Models directory before training:"
+                    ls -la models/ || echo "models/ directory not found"
+                    echo ""
+
                     . venv/bin/activate
+
+                    echo "🚀 Starting model training..."
                     python scripts/train.py
+                    TRAIN_EXIT_CODE=$?
+
+                    if [ $TRAIN_EXIT_CODE -ne 0 ]; then
+                        echo "❌ ERROR: Training script failed with exit code $TRAIN_EXIT_CODE"
+                        exit 1
+                    fi
+
+                    echo ""
+                    echo "📂 Models directory after training:"
+                    ls -la models/
+                    echo ""
 
                     # Verify models were created
                     if [ ! -f "models/best_model.joblib" ]; then
                         echo "❌ ERROR: best_model.joblib not found!"
-                        echo "Training may have failed. Checking models directory:"
-                        ls -la models/ || echo "models/ directory not found"
+                        echo "Training completed but model file is missing."
+                        echo "This might indicate an issue with the training script."
                         exit 1
                     fi
 
                     if [ ! -f "models/preprocessing_pipeline.joblib" ]; then
                         echo "❌ ERROR: preprocessing_pipeline.joblib not found!"
-                        echo "Training may have failed. Checking models directory:"
-                        ls -la models/
+                        echo "Training completed but preprocessing pipeline is missing."
                         exit 1
                     fi
 
@@ -93,6 +112,22 @@ pipeline {
             steps {
                 echo '🐳 Building Docker image...'
                 sh """
+                    # Verify models exist before building Docker image
+                    echo "🔍 Verifying model files before Docker build..."
+                    if [ ! -f "models/best_model.joblib" ] || [ ! -f "models/preprocessing_pipeline.joblib" ]; then
+                        echo "❌ ERROR: Model files not found!"
+                        echo "Contents of models/ directory:"
+                        ls -la models/
+                        echo ""
+                        echo "This usually means the 'Train Models' stage failed or was skipped."
+                        echo "Please check the training logs above."
+                        exit 1
+                    fi
+
+                    echo "✅ Model files verified:"
+                    ls -lh models/*.joblib
+                    echo ""
+
                     # Use Minikube's Docker daemon to build image directly
                     # Check if minikube is available
                     if command -v minikube &> /dev/null; then
@@ -109,7 +144,13 @@ pipeline {
                     docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest
 
                     # Verify image was built
+                    echo "📦 Docker images:"
                     docker images | grep ${DOCKER_IMAGE}
+                    echo ""
+
+                    # Verify models are in the image
+                    echo "🔍 Verifying models are in Docker image..."
+                    docker run --rm ${DOCKER_IMAGE}:${IMAGE_TAG} ls -lh /app/models/
                 """
             }
         }
@@ -153,19 +194,45 @@ pipeline {
                     echo "🚀 Starting container test-api-${BUILD_NUMBER}..."
                     docker run -d --name test-api-${BUILD_NUMBER} -p 8001:8000 ${DOCKER_IMAGE}:${IMAGE_TAG}
 
-                    # Check if container is running
+                    # Check if container started
                     echo "📊 Container status:"
                     docker ps -a | grep test-api-${BUILD_NUMBER}
+                    echo ""
 
-                    # Wait for container to start and show logs
-                    echo "⏳ Waiting 15 seconds for container to start..."
-                    sleep 15
+                    # Wait a bit and show initial logs
+                    echo "⏳ Waiting 5 seconds for initial startup..."
+                    sleep 5
 
-                    # Show container logs
-                    echo "📋 Container logs:"
+                    # Show initial container logs
+                    echo "📋 Initial container logs:"
                     docker logs test-api-${BUILD_NUMBER}
+                    echo ""
 
-                    # Check if container is still running
+                    # Check if container is still running after initial startup
+                    if ! docker ps | grep -q test-api-${BUILD_NUMBER}; then
+                        echo "❌ Container crashed during startup!"
+                        echo ""
+                        echo "📋 Full container logs:"
+                        docker logs test-api-${BUILD_NUMBER}
+                        echo ""
+                        echo "💡 Common causes:"
+                        echo "   - Missing model files (check if models were trained)"
+                        echo "   - Python import errors"
+                        echo "   - Missing dependencies in requirements.txt"
+                        docker rm -f test-api-${BUILD_NUMBER}
+                        exit 1
+                    fi
+
+                    # Wait more for app to fully start
+                    echo "⏳ Waiting 10 more seconds for app to fully start..."
+                    sleep 10
+
+                    # Show updated logs
+                    echo "📋 Updated container logs:"
+                    docker logs test-api-${BUILD_NUMBER}
+                    echo ""
+
+                    # Final check if container is still running
                     if ! docker ps | grep -q test-api-${BUILD_NUMBER}; then
                         echo "❌ Container is not running!"
                         echo "Container logs:"
