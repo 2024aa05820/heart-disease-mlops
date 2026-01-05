@@ -48,6 +48,10 @@ echo -e "${YELLOW}2. Copying Minikube config to Jenkins...${NC}"
 # Get the home directory of the actual user
 USER_HOME=$(eval echo ~$ACTUAL_USER)
 
+# Create Jenkins directories if they don't exist
+mkdir -p /var/lib/jenkins/.minikube
+mkdir -p /var/lib/jenkins/.kube
+
 if [ -d "$USER_HOME/.minikube" ]; then
     # Copy minikube config
     cp -r $USER_HOME/.minikube/* /var/lib/jenkins/.minikube/ 2>/dev/null || true
