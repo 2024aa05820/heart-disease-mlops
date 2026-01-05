@@ -404,29 +404,40 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline completed successfully!'
-            sh '''
-                echo "========================================="
-                echo "Deployment Summary"
-                echo "========================================="
-                echo "Build Number: ${BUILD_NUMBER}"
-                echo "Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
-                echo "Kubernetes Pods:"
-                kubectl get pods -l app=heart-disease-api
-                echo ""
-                echo "Service URL:"
-                minikube service heart-disease-api-service --url
-                echo ""
-                echo "MLflow UI: http://$(hostname -I | awk '{print $1}'):5001"
-                echo "========================================="
-            '''
+            script {
+                withCredentials([file(credentialsId: 'kubeconfig-minikube', variable: 'KUBECONFIG')]) {
+                    sh '''
+                        echo "========================================="
+                        echo "🎉 Deployment Summary"
+                        echo "========================================="
+                        echo "📦 Build Number: ${BUILD_NUMBER}"
+                        echo "🐳 Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
+                        echo ""
+                        echo "☸️  Kubernetes Pods:"
+                        kubectl get pods -l app=heart-disease-api
+                        echo ""
+                        echo "🌐 Service Info:"
+                        kubectl get service heart-disease-api-service
+                        echo ""
+                        echo "📊 MLflow UI: http://$(hostname -I | awk '{print $1}'):5001"
+                        echo ""
+                        echo "💡 To access the API locally, run:"
+                        echo "   kubectl port-forward service/heart-disease-api-service 8000:80"
+                        echo "   Then visit: http://localhost:8000/docs"
+                        echo "========================================="
+                    '''
+                }
+            }
         }
         failure {
             echo '❌ Pipeline failed!'
             sh '''
+                echo "========================================="
                 echo "Check logs for errors:"
                 echo "- Jenkins console output"
                 echo "- Docker logs: docker logs <container-id>"
                 echo "- Kubernetes logs: kubectl logs <pod-name>"
+                echo "========================================="
             '''
         }
         always {
