@@ -297,49 +297,59 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 echo '� Deploying to Kubernetes...'
-                sh '''
-                    # Deploy using minikube ssh to avoid certificate permission issues
-                    # This runs kubectl inside the minikube VM where permissions are not an issue
+                script {
+                    // Try to use Jenkins credential first, fall back to error message if not available
+                    try {
+                        withCredentials([file(credentialsId: 'kubeconfig-minikube', variable: 'KUBECONFIG')]) {
+                            sh '''
+                                # Use the kubeconfig from Jenkins credentials
+                                # This kubeconfig has embedded certificates (no file paths needed)
 
-                    # Copy manifests to minikube VM
-                    for file in deploy/k8s/*.yaml; do
-                        minikube ssh "sudo mkdir -p /tmp/k8s-manifests"
-                        cat "$file" | minikube ssh "sudo tee /tmp/k8s-manifests/$(basename $file) > /dev/null"
-                    done
+                                # Verify we can connect
+                                kubectl cluster-info
 
-                    # Apply manifests from inside the VM
-                    minikube ssh "sudo kubectl apply -f /tmp/k8s-manifests/"
+                                # Apply Kubernetes manifests
+                                kubectl apply -f deploy/k8s/
 
-                    # Wait for deployment
-                    minikube ssh "sudo kubectl wait --for=condition=available --timeout=300s deployment/heart-disease-api" || true
+                                # Wait for deployment to be ready
+                                kubectl wait --for=condition=available --timeout=300s deployment/heart-disease-api || true
 
-                    # Restart deployment
-                    minikube ssh "sudo kubectl rollout restart deployment/heart-disease-api"
-                    minikube ssh "sudo kubectl rollout status deployment/heart-disease-api"
-
-                    # Cleanup
-                    minikube ssh "sudo rm -rf /tmp/k8s-manifests"
-                '''
+                                # Restart deployment to use new image
+                                kubectl rollout restart deployment/heart-disease-api
+                                kubectl rollout status deployment/heart-disease-api
+                            '''
+                        }
+                    } catch (Exception e) {
+                        echo "⚠️  Jenkins credential 'kubeconfig-minikube' not found."
+                        echo "Please run: ./scripts/generate-kubeconfig-for-jenkins.sh"
+                        echo "Then upload the generated file to Jenkins as a Secret file credential with ID 'kubeconfig-minikube'"
+                        error("Kubernetes deployment failed: ${e.message}")
+                    }
+                }
             }
         }
         
         stage('Verify Deployment') {
             steps {
                 echo '✅ Verifying deployment...'
-                sh '''
-                    # Check pods using minikube ssh
-                    minikube ssh "sudo kubectl get pods -l app=heart-disease-api"
+                script {
+                    withCredentials([file(credentialsId: 'kubeconfig-minikube', variable: 'KUBECONFIG')]) {
+                        sh '''
+                            # Check pods
+                            kubectl get pods -l app=heart-disease-api
 
-                    # Get service URL
-                    SERVICE_URL=$(minikube service heart-disease-api-service --url)
-                    echo "Service URL: $SERVICE_URL"
+                            # Get service URL
+                            SERVICE_URL=$(minikube service heart-disease-api-service --url)
+                            echo "Service URL: $SERVICE_URL"
 
-                    # Wait for pods to be ready
-                    sleep 10
+                            # Wait for pods to be ready
+                            sleep 10
 
-                    # Test health endpoint
-                    curl -f $SERVICE_URL/health || echo "Health check failed, but continuing..."
-                '''
+                            # Test health endpoint
+                            curl -f $SERVICE_URL/health || echo "Health check failed, but continuing..."
+                        '''
+                    }
+                }
             }
         }
         
