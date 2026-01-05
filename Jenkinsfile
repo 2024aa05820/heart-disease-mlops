@@ -419,11 +419,25 @@ pipeline {
                         echo "🌐 Service Info:"
                         kubectl get service heart-disease-api-service
                         echo ""
-                        echo "📊 MLflow UI: http://$(hostname -I | awk '{print $1}'):5001"
+                        echo "========================================="
+                        echo "📊 Access URLs"
+                        echo "========================================="
+                        SERVER_IP=$(hostname -I | awk '{print $1}')
+                        echo "MLflow UI: http://$SERVER_IP:5001"
                         echo ""
-                        echo "💡 To access the API locally, run:"
+                        echo "💡 To access services from your local machine:"
+                        echo ""
+                        echo "1️⃣  API (FastAPI + Swagger):"
                         echo "   kubectl port-forward service/heart-disease-api-service 8000:80"
                         echo "   Then visit: http://localhost:8000/docs"
+                        echo ""
+                        echo "2️⃣  MLflow UI (from your local machine):"
+                        echo "   ssh -L 5001:localhost:5001 cloud@$SERVER_IP"
+                        echo "   Then visit: http://localhost:5001"
+                        echo ""
+                        echo "3️⃣  Prometheus Metrics:"
+                        echo "   kubectl port-forward service/heart-disease-api-service 8000:80"
+                        echo "   Then visit: http://localhost:8000/metrics"
                         echo "========================================="
                     '''
                 }
