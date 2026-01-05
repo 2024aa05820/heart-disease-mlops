@@ -335,50 +335,49 @@ pipeline {
                 script {
                     withCredentials([file(credentialsId: 'kubeconfig-minikube', variable: 'KUBECONFIG')]) {
                         sh '''
-                            # Check if minikube is running
-                            if ! minikube status | grep -q "Running"; then
-                                echo "⚠️  Minikube is not running. Starting minikube..."
-                                minikube start
-                                sleep 10
-                            fi
-
                             # Check pods
+                            echo "📋 Checking deployment status..."
                             kubectl get pods -l app=heart-disease-api
 
-                            # Get service URL (with retry)
-                            MAX_RETRIES=3
-                            RETRY_COUNT=0
-                            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-                                SERVICE_URL=$(minikube service heart-disease-api-service --url 2>/dev/null) && break
-                                RETRY_COUNT=$((RETRY_COUNT + 1))
-                                echo "Retry $RETRY_COUNT/$MAX_RETRIES: Waiting for service..."
-                                sleep 5
-                            done
+                            # Wait for pods to be ready
+                            echo "⏳ Waiting for pods to be ready..."
+                            kubectl wait --for=condition=ready --timeout=120s pod -l app=heart-disease-api || {
+                                echo "⚠️  Pods not ready yet, checking status..."
+                                kubectl describe pods -l app=heart-disease-api
+                            }
 
-                            if [ -z "$SERVICE_URL" ]; then
-                                echo "⚠️  Could not get service URL. Using port-forward instead..."
-                                # Get the pod name
-                                POD_NAME=$(kubectl get pods -l app=heart-disease-api -o jsonpath='{.items[0].metadata.name}')
+                            # Get the pod name
+                            POD_NAME=$(kubectl get pods -l app=heart-disease-api -o jsonpath='{.items[0].metadata.name}')
+                            echo "🎯 Testing pod: $POD_NAME"
 
-                                # Port forward in background
-                                kubectl port-forward $POD_NAME 8000:8000 &
-                                PF_PID=$!
-                                sleep 5
+                            # Use port-forward to test the service
+                            echo "🔌 Setting up port-forward..."
+                            kubectl port-forward $POD_NAME 8000:8000 &
+                            PF_PID=$!
 
-                                # Test using localhost
-                                curl -f http://localhost:8000/health || echo "Health check failed"
+                            # Wait for port-forward to be ready
+                            sleep 5
 
-                                # Kill port-forward
-                                kill $PF_PID 2>/dev/null || true
+                            # Test health endpoint
+                            echo "🏥 Testing health endpoint..."
+                            if curl -f http://localhost:8000/health; then
+                                echo "✅ Health check passed!"
                             else
-                                echo "Service URL: $SERVICE_URL"
-
-                                # Wait for pods to be ready
-                                kubectl wait --for=condition=ready --timeout=60s pod -l app=heart-disease-api || true
-
-                                # Test health endpoint
-                                curl -f $SERVICE_URL/health || echo "Health check failed, but continuing..."
+                                echo "❌ Health check failed"
+                                kubectl logs $POD_NAME --tail=50
                             fi
+
+                            # Test prediction endpoint
+                            echo "🧪 Testing prediction endpoint..."
+                            curl -X POST http://localhost:8000/predict \
+                                -H "Content-Type: application/json" \
+                                -d '{"age":63,"sex":1,"cp":3,"trestbps":145,"chol":233,"fbs":1,"restecg":0,"thalach":150,"exang":0,"oldpeak":2.3,"slope":0,"ca":0,"thal":1}' \
+                                || echo "⚠️  Prediction test failed"
+
+                            # Cleanup port-forward
+                            kill $PF_PID 2>/dev/null || true
+
+                            echo "✅ Verification complete!"
                         '''
                     }
                 }
