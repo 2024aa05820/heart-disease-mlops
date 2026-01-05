@@ -91,14 +91,24 @@ wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenki
 rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
 dnf install -y jenkins
 
-# Add jenkins to docker group
+# Add jenkins to docker group (Issue 2 fix)
+echo -e "${YELLOW}🔧 Configuring Jenkins Docker access...${NC}"
 usermod -aG docker jenkins
+
+# Create and configure Minikube directory for Jenkins (Issue 3 fix)
+echo -e "${YELLOW}🔧 Configuring Jenkins Minikube access...${NC}"
+mkdir -p /var/lib/jenkins/.minikube
+mkdir -p /var/lib/jenkins/.kube
+chown -R jenkins:jenkins /var/lib/jenkins/.minikube
+chown -R jenkins:jenkins /var/lib/jenkins/.kube
+chmod -R 755 /var/lib/jenkins/.minikube
+chmod -R 755 /var/lib/jenkins/.kube
 
 systemctl daemon-reload
 systemctl start jenkins
 systemctl enable jenkins
 
-echo -e "${GREEN}✅ Jenkins installed and started${NC}"
+echo -e "${GREEN}✅ Jenkins installed and configured${NC}"
 echo ""
 
 # Install additional tools
@@ -144,12 +154,15 @@ echo ""
 echo "2. Start Minikube:"
 echo "   ${BLUE}minikube start --driver=docker --cpus=2 --memory=4096${NC}"
 echo ""
-echo "3. Access Jenkins:"
+echo "3. Configure Minikube for Jenkins (IMPORTANT):"
+echo "   ${BLUE}sudo ./scripts/configure-jenkins-minikube.sh${NC}"
+echo ""
+echo "4. Access Jenkins:"
 echo "   URL: ${BLUE}http://${SERVER_IP}:8080${NC}"
 echo "   Password:"
 cat /var/lib/jenkins/secrets/initialAdminPassword 2>/dev/null || echo "   (wait a few seconds and run: sudo cat /var/lib/jenkins/secrets/initialAdminPassword)"
 echo ""
-echo "4. Configure Jenkins:"
+echo "5. Configure Jenkins:"
 echo "   - Install suggested plugins"
 echo "   - Create admin user"
 echo "   - Add GitHub token (ID: github-token)"
@@ -158,5 +171,6 @@ echo ""
 echo -e "${GREEN}============================================${NC}"
 echo ""
 echo "📖 Full guide: ROCKY_LINUX_SETUP.md"
+echo "🔧 Service management: ./scripts/manage-services.sh"
 echo ""
 

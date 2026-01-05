@@ -8,10 +8,21 @@ help:
 	@echo "Heart Disease MLOps Project"
 	@echo ""
 	@echo "🚀 Quick Start (Rocky Linux):"
-	@echo "  make rocky-setup   - Install all prerequisites (Java, Docker, k8s, Jenkins)"
-	@echo "  make rocky-start   - Start Minikube and show URLs"
-	@echo "  make rocky-status  - Check status of all services"
-	@echo "  make verify        - Run comprehensive verification"
+	@echo "  make rocky-setup      - Install all prerequisites (Java, Docker, k8s, Jenkins)"
+	@echo "  make rocky-start      - Start Minikube and show URLs"
+	@echo "  make rocky-status     - Check status of all services"
+	@echo "  make verify           - Run comprehensive verification"
+	@echo "  make configure-jenkins- Configure Jenkins to access Minikube"
+	@echo ""
+	@echo "🔧 Service Management:"
+	@echo "  make services-start   - Start all services (Docker, Jenkins, Minikube, MLflow)"
+	@echo "  make services-stop    - Stop all services"
+	@echo "  make services-restart - Restart all services"
+	@echo "  make services-status  - Show status of all services"
+	@echo ""
+	@echo "  Individual services: docker-start, jenkins-start, minikube-start, mlflow-start"
+	@echo "                      docker-stop, jenkins-stop, minikube-stop, mlflow-stop"
+	@echo "                      docker-restart, jenkins-restart, minikube-restart"
 	@echo ""
 	@echo "📦 Development:"
 	@echo "  make init-conda    - Create conda environment and install dependencies"
@@ -166,6 +177,60 @@ rocky-status:
 verify:
 	@echo "🔍 Running comprehensive verification..."
 	@./scripts/verify-installation.sh
+
+# Service Management
+services-start:
+	@./scripts/manage-services.sh start-all
+
+services-stop:
+	@./scripts/manage-services.sh stop-all
+
+services-restart:
+	@./scripts/manage-services.sh restart-all
+
+services-status:
+	@./scripts/manage-services.sh status
+
+# Individual service commands
+docker-start:
+	@sudo ./scripts/manage-services.sh start-docker
+
+docker-stop:
+	@sudo ./scripts/manage-services.sh stop-docker
+
+docker-restart:
+	@sudo ./scripts/manage-services.sh restart-docker
+
+jenkins-start:
+	@sudo ./scripts/manage-services.sh start-jenkins
+
+jenkins-stop:
+	@sudo ./scripts/manage-services.sh stop-jenkins
+
+jenkins-restart:
+	@sudo ./scripts/manage-services.sh restart-jenkins
+
+minikube-start:
+	@./scripts/manage-services.sh start-minikube
+
+minikube-stop:
+	@./scripts/manage-services.sh stop-minikube
+
+minikube-restart:
+	@./scripts/manage-services.sh restart-minikube
+
+mlflow-start:
+	@./scripts/manage-services.sh start-mlflow
+
+mlflow-stop:
+	@./scripts/manage-services.sh stop-mlflow
+
+# Jenkins configuration
+configure-jenkins:
+	@sudo ./scripts/configure-jenkins-minikube.sh
+
+fix-jenkins:
+	@sudo ./scripts/fix-jenkins-issues.sh
 
 urls:
 	@echo "============================================"
