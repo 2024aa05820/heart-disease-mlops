@@ -134,8 +134,14 @@ pipeline {
                         exit 1
                     }
 
-                    # Clean up any existing test container
-                    docker rm -f test-api-${BUILD_NUMBER} 2>/dev/null || true
+                    # Clean up ALL old test containers (from any build)
+                    echo "🧹 Cleaning up any existing test containers..."
+                    docker ps -a | grep test-api- | awk '{print \$1}' | xargs -r docker rm -f 2>/dev/null || true
+
+                    # Also kill any process using port 8001
+                    echo "🔍 Checking for processes using port 8001..."
+                    lsof -ti:8001 | xargs -r kill -9 2>/dev/null || true
+                    sleep 2
 
                     # Start container
                     echo "🚀 Starting container test-api-${BUILD_NUMBER}..."
@@ -310,9 +316,18 @@ pipeline {
         always {
             echo '🧹 Cleaning up...'
             sh '''
+                # Use Minikube's Docker daemon for cleanup
+                if command -v minikube &> /dev/null; then
+                    eval $(minikube docker-env) || true
+                fi
+
+                # Clean up ALL test containers
+                echo "Removing all test containers..."
+                docker ps -a | grep test-api- | awk '{print $1}' | xargs -r docker rm -f 2>/dev/null || true
+
                 # Clean up old Docker images (keep last 5)
                 docker images ${DOCKER_IMAGE} --format "{{.ID}}" | tail -n +6 | xargs -r docker rmi || true
-                
+
                 # Clean up Python virtual environment
                 rm -rf venv || true
             '''
