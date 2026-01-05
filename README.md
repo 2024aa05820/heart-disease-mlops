@@ -4,9 +4,29 @@
 
 A production-ready machine learning solution for predicting heart disease risk, built with modern MLOps best practices.
 
-## 🚀 Quick Deployment to Remote Minikube
+## 🚀 Quick Start
 
-**Deploy in 5 minutes:**
+### Rocky Linux (Recommended for Production)
+
+**Deploy in 10 minutes:**
+
+```bash
+# Clone and setup
+git clone https://github.com/2024aa05820/heart-disease-mlops.git
+cd heart-disease-mlops
+
+# Automated installation (Java, Docker, k8s, Jenkins)
+sudo ./scripts/rocky-setup.sh
+
+# Log out and back in, then:
+make rocky-start
+make deploy
+make urls
+```
+
+**📖 Full Guide:** [ROCKY_LINUX_QUICKSTART.md](ROCKY_LINUX_QUICKSTART.md) | [ROCKY_LINUX_SETUP.md](ROCKY_LINUX_SETUP.md)
+
+### Other Deployment Options
 
 ```bash
 # SSH to your remote machine

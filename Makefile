@@ -7,20 +7,38 @@ PYTHON := python
 help:
 	@echo "Heart Disease MLOps Project"
 	@echo ""
-	@echo "Available commands:"
+	@echo "🚀 Quick Start (Rocky Linux):"
+	@echo "  make rocky-setup   - Install all prerequisites (Java, Docker, k8s, Jenkins)"
+	@echo "  make rocky-start   - Start Minikube and show URLs"
+	@echo "  make rocky-status  - Check status of all services"
+	@echo ""
+	@echo "📦 Development:"
 	@echo "  make init-conda    - Create conda environment and install dependencies"
 	@echo "  make init          - Create venv and install dependencies (alternative)"
 	@echo "  make install       - Install dependencies only (run after activating env)"
+	@echo "  make download      - Download the dataset"
+	@echo "  make train         - Train the model"
+	@echo ""
+	@echo "🧪 Testing & Quality:"
 	@echo "  make lint          - Run linting (ruff)"
 	@echo "  make format        - Format code (black)"
 	@echo "  make test          - Run pytest"
-	@echo "  make download      - Download the dataset"
-	@echo "  make train         - Train the model"
-	@echo "  make serve         - Run the API server locally"
+	@echo ""
+	@echo "🐳 Docker:"
 	@echo "  make docker-build  - Build Docker image"
 	@echo "  make docker-run    - Run Docker container"
+	@echo ""
+	@echo "☸️  Kubernetes:"
 	@echo "  make deploy        - Deploy to Kubernetes (Minikube)"
+	@echo "  make k8s-status    - Check Kubernetes deployment status"
+	@echo "  make k8s-logs      - View pod logs"
+	@echo "  make k8s-restart   - Restart deployment"
+	@echo ""
+	@echo "📊 Monitoring:"
 	@echo "  make mlflow-ui     - Start MLflow UI"
+	@echo "  make urls          - Show all service URLs"
+	@echo ""
+	@echo "🧹 Cleanup:"
 	@echo "  make clean         - Remove generated files"
 	@echo ""
 	@echo "For Conda: Run 'make init-conda' then 'conda activate $(CONDA_ENV)'"
@@ -100,6 +118,61 @@ undeploy:
 
 k8s-status:
 	kubectl get pods,svc,ingress
+
+k8s-logs:
+	kubectl logs -f -l app=heart-disease-api
+
+k8s-restart:
+	kubectl rollout restart deployment/heart-disease-api
+	kubectl rollout status deployment/heart-disease-api
+
+# ==================== ROCKY LINUX SETUP ====================
+rocky-setup:
+	@echo "🚀 Installing all prerequisites on Rocky Linux..."
+	@echo "This will install: Java, Docker, kubectl, Minikube, Jenkins"
+	@echo ""
+	sudo ./scripts/rocky-setup.sh
+
+rocky-start:
+	@echo "🚀 Starting Minikube..."
+	minikube start --driver=docker --cpus=2 --memory=4096
+	@echo ""
+	@echo "============================================"
+	@echo "Service URLs:"
+	@echo "============================================"
+	@echo "Jenkins:    http://$$(hostname -I | awk '{print $$1}'):8080"
+	@echo "MLflow:     http://$$(hostname -I | awk '{print $$1}'):5001"
+	@echo "Minikube:   $$(minikube ip)"
+	@echo "============================================"
+
+rocky-status:
+	@echo "============================================"
+	@echo "System Status"
+	@echo "============================================"
+	@echo ""
+	@echo "Docker:"
+	@sudo systemctl status docker --no-pager | head -3
+	@echo ""
+	@echo "Jenkins:"
+	@sudo systemctl status jenkins --no-pager | head -3
+	@echo ""
+	@echo "Minikube:"
+	@minikube status || echo "Minikube not running"
+	@echo ""
+	@echo "Kubernetes Pods:"
+	@kubectl get pods 2>/dev/null || echo "No pods running"
+
+urls:
+	@echo "============================================"
+	@echo "Service URLs"
+	@echo "============================================"
+	@MINIKUBE_IP=$$(minikube ip 2>/dev/null || echo "not-running"); \
+	SERVER_IP=$$(hostname -I | awk '{print $$1}'); \
+	echo "API:        http://$$MINIKUBE_IP:30080"; \
+	echo "Swagger:    http://$$MINIKUBE_IP:30080/docs"; \
+	echo "MLflow:     http://$$SERVER_IP:5001"; \
+	echo "Jenkins:    http://$$SERVER_IP:8080"; \
+	echo "============================================"
 
 # ==================== CLEANUP ====================
 clean:
