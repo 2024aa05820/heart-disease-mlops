@@ -243,15 +243,37 @@ pipeline {
 
                     # Test health endpoint with retries
                     echo "🏥 Testing health endpoint..."
+
+                    # First, test from inside the container
+                    echo "Testing from inside container (port 8000)..."
+                    docker exec test-api-${BUILD_NUMBER} curl -f http://localhost:8000/health || {
+                        echo "❌ Health check failed from inside container!"
+                        echo "Container logs:"
+                        docker logs test-api-${BUILD_NUMBER}
+                        docker rm -f test-api-${BUILD_NUMBER}
+                        exit 1
+                    }
+                    echo "✅ Internal health check passed!"
+                    echo ""
+
+                    # Now test from host
+                    echo "Testing from host (port 8001)..."
                     for i in 1 2 3 4 5; do
                         echo "Attempt \$i/5..."
+
+                        # Check if port is actually listening
+                        echo "Checking port 8001..."
+                        netstat -tuln | grep 8001 || echo "Port 8001 not found in netstat"
 
                         # Try to curl and show detailed output
                         HTTP_CODE=\$(curl -s -o /tmp/health_response.txt -w "%{http_code}" http://localhost:8001/health)
                         echo "HTTP Status Code: \$HTTP_CODE"
-                        echo "Response body:"
-                        cat /tmp/health_response.txt
-                        echo ""
+
+                        if [ -f /tmp/health_response.txt ]; then
+                            echo "Response body:"
+                            cat /tmp/health_response.txt
+                            echo ""
+                        fi
 
                         if [ "\$HTTP_CODE" = "200" ]; then
                             echo "✅ Health check passed!"
@@ -260,6 +282,11 @@ pipeline {
 
                         if [ \$i -eq 5 ]; then
                             echo "❌ Health check failed after 5 attempts"
+                            echo ""
+                            echo "Debug info:"
+                            echo "Docker port mapping:"
+                            docker port test-api-${BUILD_NUMBER}
+                            echo ""
                             echo "Container logs:"
                             docker logs test-api-${BUILD_NUMBER}
                             docker rm -f test-api-${BUILD_NUMBER}
