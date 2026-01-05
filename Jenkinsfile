@@ -179,13 +179,16 @@ pipeline {
                     echo "🧹 Cleaning up any existing test containers..."
                     docker ps -a | grep test-api- | awk '{print \$1}' | xargs -r docker rm -f 2>/dev/null || true
 
-                    # Start container (no port mapping needed, we'll use container IP)
-                    echo "🚀 Starting container test-api-${BUILD_NUMBER}..."
-                    docker run -d --name test-api-${BUILD_NUMBER} ${DOCKER_IMAGE}:${IMAGE_TAG}
+                    # Use dynamic port based on build number to avoid conflicts
+                    # Port range: 8000 + BUILD_NUMBER (e.g., build 23 -> port 8023)
+                    HOST_PORT=\$((8000 + ${BUILD_NUMBER}))
+                    echo "📍 Using host port: \$HOST_PORT"
 
-                    # Get container IP address
-                    CONTAINER_IP=\$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' test-api-${BUILD_NUMBER})
-                    echo "📍 Container IP: \$CONTAINER_IP"
+                    # Start container with port mapping
+                    echo "🚀 Starting container test-api-${BUILD_NUMBER}..."
+                    docker run -d --name test-api-${BUILD_NUMBER} -p \$HOST_PORT:8000 ${DOCKER_IMAGE}:${IMAGE_TAG}
+
+                    echo "✅ Container started with port mapping \$HOST_PORT:8000"
 
                     # Check if container started
                     echo "📊 Container status:"
@@ -249,13 +252,13 @@ pipeline {
                     echo "✅ Internal health check passed!"
                     echo ""
 
-                    # Now test from host using container IP
-                    echo "Testing from host using container IP \$CONTAINER_IP..."
+                    # Now test from host using mapped port
+                    echo "Testing from host using localhost:\$HOST_PORT..."
                     for i in 1 2 3 4 5; do
                         echo "Attempt \$i/5..."
 
-                        # Try to curl using container IP
-                        HTTP_CODE=\$(curl -s -o /tmp/health_response.txt -w "%{http_code}" http://\$CONTAINER_IP:8000/health || echo "000")
+                        # Try to curl using mapped port
+                        HTTP_CODE=\$(curl -s -o /tmp/health_response.txt -w "%{http_code}" http://localhost:\$HOST_PORT/health || echo "000")
                         echo "HTTP Status Code: \$HTTP_CODE"
 
                         if [ -f /tmp/health_response.txt ]; then
