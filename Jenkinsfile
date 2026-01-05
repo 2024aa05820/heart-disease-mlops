@@ -298,15 +298,18 @@ pipeline {
             steps {
                 echo '🚀 Deploying to Kubernetes...'
                 sh '''
+                    # Use minikube kubectl instead of regular kubectl to avoid permission issues
+                    # minikube kubectl handles authentication internally
+
                     # Apply Kubernetes manifests
-                    kubectl apply -f deploy/k8s/
+                    minikube kubectl -- apply -f deploy/k8s/
 
                     # Wait for deployment to be ready
-                    kubectl wait --for=condition=available --timeout=300s deployment/heart-disease-api || true
+                    minikube kubectl -- wait --for=condition=available --timeout=300s deployment/heart-disease-api || true
 
                     # Restart deployment to use new image
-                    kubectl rollout restart deployment/heart-disease-api
-                    kubectl rollout status deployment/heart-disease-api
+                    minikube kubectl -- rollout restart deployment/heart-disease-api
+                    minikube kubectl -- rollout status deployment/heart-disease-api
                 '''
             }
         }
@@ -315,8 +318,8 @@ pipeline {
             steps {
                 echo '✅ Verifying deployment...'
                 sh '''
-                    # Check pods
-                    kubectl get pods -l app=heart-disease-api
+                    # Check pods using minikube kubectl
+                    minikube kubectl -- get pods -l app=heart-disease-api
 
                     # Get service URL
                     SERVICE_URL=$(minikube service heart-disease-api-service --url)
