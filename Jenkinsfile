@@ -138,10 +138,16 @@ pipeline {
                     echo "🧹 Cleaning up any existing test containers..."
                     docker ps -a | grep test-api- | awk '{print \$1}' | xargs -r docker rm -f 2>/dev/null || true
 
-                    # Also kill any process using port 8001
-                    echo "🔍 Checking for processes using port 8001..."
-                    lsof -ti:8001 | xargs -r kill -9 2>/dev/null || true
-                    sleep 2
+                    # Also stop any containers using port 8001
+                    echo "🔍 Checking for containers using port 8001..."
+                    docker ps --filter "publish=8001" -q | xargs -r docker stop 2>/dev/null || true
+                    docker ps -a --filter "publish=8001" -q | xargs -r docker rm -f 2>/dev/null || true
+
+                    # Double check - remove any container with port 8001 in its config
+                    docker ps -a --format '{{.ID}} {{.Ports}}' | grep '8001' | awk '{print \$1}' | xargs -r docker rm -f 2>/dev/null || true
+
+                    # Wait a bit for port to be released
+                    sleep 3
 
                     # Start container
                     echo "🚀 Starting container test-api-${BUILD_NUMBER}..."
@@ -333,6 +339,11 @@ pipeline {
                 # Clean up ALL test containers
                 echo "Removing all test containers..."
                 docker ps -a | grep test-api- | awk '{print $1}' | xargs -r docker rm -f 2>/dev/null || true
+
+                # Also clean up any containers using port 8001
+                echo "Removing containers using port 8001..."
+                docker ps --filter "publish=8001" -q | xargs -r docker stop 2>/dev/null || true
+                docker ps -a --filter "publish=8001" -q | xargs -r docker rm -f 2>/dev/null || true
 
                 # Clean up old Docker images (keep last 5)
                 docker images ${DOCKER_IMAGE} --format "{{.ID}}" | tail -n +6 | xargs -r docker rmi || true
