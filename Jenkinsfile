@@ -179,16 +179,13 @@ pipeline {
                     echo "🧹 Cleaning up any existing test containers..."
                     docker ps -a | grep test-api- | awk '{print \$1}' | xargs -r docker rm -f 2>/dev/null || true
 
-                    # Check for any process using port 8000
-                    echo "🔍 Checking for processes using port 8000..."
-                    lsof -ti:8000 | xargs -r kill -9 2>/dev/null || true
-
-                    # Wait a bit for port to be released
-                    sleep 3
-
-                    # Start container with network mode host for better connectivity
+                    # Start container (no port mapping needed, we'll use container IP)
                     echo "🚀 Starting container test-api-${BUILD_NUMBER}..."
-                    docker run -d --name test-api-${BUILD_NUMBER} --network host ${DOCKER_IMAGE}:${IMAGE_TAG}
+                    docker run -d --name test-api-${BUILD_NUMBER} ${DOCKER_IMAGE}:${IMAGE_TAG}
+
+                    # Get container IP address
+                    CONTAINER_IP=\$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' test-api-${BUILD_NUMBER})
+                    echo "📍 Container IP: \$CONTAINER_IP"
 
                     # Check if container started
                     echo "📊 Container status:"
@@ -252,17 +249,13 @@ pipeline {
                     echo "✅ Internal health check passed!"
                     echo ""
 
-                    # Now test from host (using port 8000 since we're using --network host)
-                    echo "Testing from host (port 8000 with host network)..."
+                    # Now test from host using container IP
+                    echo "Testing from host using container IP \$CONTAINER_IP..."
                     for i in 1 2 3 4 5; do
                         echo "Attempt \$i/5..."
 
-                        # Check if port is actually listening
-                        echo "Checking port 8000..."
-                        netstat -tuln | grep 8000 || echo "Port 8000 not found in netstat"
-
-                        # Try to curl and show detailed output
-                        HTTP_CODE=\$(curl -s -o /tmp/health_response.txt -w "%{http_code}" http://localhost:8000/health)
+                        # Try to curl using container IP
+                        HTTP_CODE=\$(curl -s -o /tmp/health_response.txt -w "%{http_code}" http://\$CONTAINER_IP:8000/health || echo "000")
                         echo "HTTP Status Code: \$HTTP_CODE"
 
                         if [ -f /tmp/health_response.txt ]; then
