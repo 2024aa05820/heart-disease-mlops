@@ -298,9 +298,6 @@ pipeline {
             steps {
                 echo '🚀 Deploying to Kubernetes...'
                 sh '''
-                    # Set up kubectl to use insecure connection (skip TLS verification)
-                    kubectl config set-cluster minikube --insecure-skip-tls-verify=true
-
                     # Apply Kubernetes manifests
                     kubectl apply -f deploy/k8s/
 
