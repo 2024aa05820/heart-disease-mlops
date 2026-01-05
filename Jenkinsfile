@@ -90,15 +90,24 @@ pipeline {
             steps {
                 echo '🧪 Testing Docker image...'
                 sh """
+                    # Use Minikube's Docker daemon (where the image was built)
+                    eval \$(minikube docker-env) || echo "Using local Docker"
+
+                    # Verify image exists
+                    docker images | grep ${DOCKER_IMAGE} || {
+                        echo "❌ Image not found in Minikube Docker"
+                        exit 1
+                    }
+
                     # Start container
                     docker run -d --name test-api-${BUILD_NUMBER} -p 8001:8000 ${DOCKER_IMAGE}:${IMAGE_TAG}
-                    
+
                     # Wait for container to start
                     sleep 10
-                    
+
                     # Test health endpoint
                     curl -f http://localhost:8001/health || exit 1
-                    
+
                     # Stop and remove container
                     docker stop test-api-${BUILD_NUMBER}
                     docker rm test-api-${BUILD_NUMBER}
