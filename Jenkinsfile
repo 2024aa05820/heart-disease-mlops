@@ -296,20 +296,51 @@ pipeline {
         
         stage('Deploy to Kubernetes') {
             steps {
-                echo '🚀 Deploying to Kubernetes...'
+                echo '� Deploying to Kubernetes...'
                 sh '''
-                    # Use minikube kubectl instead of regular kubectl to avoid permission issues
-                    # minikube kubectl handles authentication internally
+                    # Get Minikube IP and API server port
+                    MINIKUBE_IP=$(minikube ip)
+                    API_PORT=8443
+
+                    # Create a simple kubeconfig that skips TLS verification
+                    cat > /tmp/jenkins-kubeconfig <<EOF
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    insecure-skip-tls-verify: true
+    server: https://${MINIKUBE_IP}:${API_PORT}
+  name: minikube
+contexts:
+- context:
+    cluster: minikube
+    namespace: default
+    user: minikube
+  name: minikube
+current-context: minikube
+preferences: {}
+users:
+- name: minikube
+  user:
+    client-certificate: /home/cloud/.minikube/profiles/minikube/client.crt
+    client-key: /home/cloud/.minikube/profiles/minikube/client.key
+EOF
+
+                    # Try to make certs readable
+                    sudo chmod -R a+rX /home/cloud/.minikube/ 2>/dev/null || true
+
+                    # Use the new kubeconfig
+                    export KUBECONFIG=/tmp/jenkins-kubeconfig
 
                     # Apply Kubernetes manifests
-                    minikube kubectl -- apply -f deploy/k8s/
+                    kubectl apply -f deploy/k8s/
 
                     # Wait for deployment to be ready
-                    minikube kubectl -- wait --for=condition=available --timeout=300s deployment/heart-disease-api || true
+                    kubectl wait --for=condition=available --timeout=300s deployment/heart-disease-api || true
 
                     # Restart deployment to use new image
-                    minikube kubectl -- rollout restart deployment/heart-disease-api
-                    minikube kubectl -- rollout status deployment/heart-disease-api
+                    kubectl rollout restart deployment/heart-disease-api
+                    kubectl rollout status deployment/heart-disease-api
                 '''
             }
         }
@@ -318,8 +349,11 @@ pipeline {
             steps {
                 echo '✅ Verifying deployment...'
                 sh '''
-                    # Check pods using minikube kubectl
-                    minikube kubectl -- get pods -l app=heart-disease-api
+                    # Use the token-based kubeconfig
+                    export KUBECONFIG=/tmp/jenkins-kubeconfig
+
+                    # Check pods
+                    kubectl get pods -l app=heart-disease-api
 
                     # Get service URL
                     SERVICE_URL=$(minikube service heart-disease-api-service --url)
@@ -330,6 +364,9 @@ pipeline {
 
                     # Test health endpoint
                     curl -f $SERVICE_URL/health || echo "Health check failed, but continuing..."
+
+                    # Cleanup
+                    rm -f /tmp/jenkins-kubeconfig
                 '''
             }
         }
