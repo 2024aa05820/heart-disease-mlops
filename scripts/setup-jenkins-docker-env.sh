@@ -31,17 +31,17 @@ ACTUAL_USER=${SUDO_USER:-$USER}
 USER_HOME=$(eval echo ~$ACTUAL_USER)
 
 echo -e "${YELLOW}1. Checking Minikube status...${NC}"
-if ! minikube status &> /dev/null; then
+if ! sudo -u $ACTUAL_USER minikube status &> /dev/null; then
     echo -e "${RED}❌ Minikube is not running!${NC}"
-    echo -e "${YELLOW}Please start Minikube first: minikube start --driver=docker${NC}"
+    echo -e "${YELLOW}Please start Minikube first (as user $ACTUAL_USER): minikube start --driver=docker${NC}"
     exit 1
 fi
 echo -e "${GREEN}✅ Minikube is running${NC}"
 echo ""
 
 echo -e "${YELLOW}2. Getting Minikube Docker environment...${NC}"
-# Get Minikube docker-env settings
-DOCKER_ENV=$(minikube docker-env --shell bash)
+# Get Minikube docker-env settings (as the actual user)
+DOCKER_ENV=$(sudo -u $ACTUAL_USER minikube docker-env --shell bash)
 echo -e "${GREEN}✅ Docker environment retrieved${NC}"
 echo ""
 
@@ -98,7 +98,7 @@ fi
 echo ""
 
 echo -e "${YELLOW}8. Testing Jenkins Minikube Docker access...${NC}"
-if sudo -u jenkins bash -c "eval \$(minikube docker-env) && docker ps" &> /dev/null; then
+if sudo -u jenkins bash -c "eval \$(sudo -u $ACTUAL_USER minikube docker-env) && docker ps" &> /dev/null; then
     echo -e "${GREEN}✅ Jenkins can access Minikube Docker daemon!${NC}"
 else
     echo -e "${YELLOW}⚠️  Cannot verify Minikube Docker access${NC}"

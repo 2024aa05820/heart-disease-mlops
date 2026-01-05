@@ -31,11 +31,11 @@ ACTUAL_USER=${SUDO_USER:-$USER}
 echo -e "${BLUE}Configuring for user: $ACTUAL_USER${NC}"
 echo ""
 
-# Check if Minikube is running
+# Check if Minikube is running (check as the actual user, not root)
 echo -e "${YELLOW}1. Checking if Minikube is running...${NC}"
-if ! minikube status &> /dev/null; then
+if ! sudo -u $ACTUAL_USER minikube status &> /dev/null; then
     echo -e "${RED}❌ Minikube is not running!${NC}"
-    echo -e "${YELLOW}Please start Minikube first:${NC}"
+    echo -e "${YELLOW}Please start Minikube first (as user $ACTUAL_USER):${NC}"
     echo -e "${BLUE}  minikube start --driver=docker --cpus=2 --memory=4096${NC}"
     exit 1
 fi
@@ -72,8 +72,8 @@ else
 fi
 echo ""
 
-# Get the Minikube profile name
-MINIKUBE_PROFILE=$(minikube profile 2>/dev/null || echo "minikube")
+# Get the Minikube profile name (as the actual user)
+MINIKUBE_PROFILE=$(sudo -u $ACTUAL_USER minikube profile 2>/dev/null || echo "minikube")
 echo -e "${BLUE}Using Minikube profile: $MINIKUBE_PROFILE${NC}"
 echo ""
 
