@@ -88,9 +88,25 @@ Environment="MINIKUBE_HOME=/var/lib/jenkins/.minikube"
 Environment="KUBECONFIG=/var/lib/jenkins/.kube/config"
 Environment="DOCKER_HOST=unix:///var/run/docker.sock"
 Environment="MINIKUBE_ACTIVE_DOCKERD=$MINIKUBE_PROFILE"
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
 EOF
 
 echo -e "${GREEN}✅ Environment variables configured${NC}"
+echo ""
+
+# Create symlink for minikube if it doesn't exist in standard location
+echo -e "${YELLOW}4b. Ensuring minikube is accessible to Jenkins...${NC}"
+MINIKUBE_PATH=$(which minikube 2>/dev/null || echo "")
+if [ -n "$MINIKUBE_PATH" ]; then
+    if [ ! -f "/usr/local/bin/minikube" ]; then
+        ln -sf "$MINIKUBE_PATH" /usr/local/bin/minikube 2>/dev/null || true
+        echo -e "${GREEN}✅ Created symlink: /usr/local/bin/minikube -> $MINIKUBE_PATH${NC}"
+    else
+        echo -e "${GREEN}✅ Minikube already accessible at /usr/local/bin/minikube${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠️  Minikube not found in PATH${NC}"
+fi
 echo ""
 
 # Ensure Jenkins can access Docker socket

@@ -5,6 +5,7 @@ pipeline {
         DOCKER_IMAGE = 'heart-disease-api'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         MINIKUBE_HOME = '/var/lib/jenkins/.minikube'
+        PATH = "/usr/local/bin:${env.PATH}"
     }
     
     stages {
@@ -75,8 +76,17 @@ pipeline {
                 echo '🐳 Building Docker image...'
                 sh """
                     # Use Minikube's Docker daemon to build image directly
-                    eval \$(minikube docker-env) || echo "Using local Docker"
+                    # Check if minikube is available
+                    if command -v minikube &> /dev/null; then
+                        echo "✅ Minikube found, using Minikube's Docker daemon"
+                        eval \$(minikube docker-env) || {
+                            echo "⚠️  Failed to set Minikube Docker env, using local Docker"
+                        }
+                    else
+                        echo "⚠️  Minikube command not found, using local Docker"
+                    fi
 
+                    # Build the image
                     docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} .
                     docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:latest
 
@@ -91,11 +101,18 @@ pipeline {
                 echo '🧪 Testing Docker image...'
                 sh """
                     # Use Minikube's Docker daemon (where the image was built)
-                    eval \$(minikube docker-env) || echo "Using local Docker"
+                    if command -v minikube &> /dev/null; then
+                        echo "✅ Using Minikube's Docker daemon for testing"
+                        eval \$(minikube docker-env) || echo "⚠️  Using local Docker"
+                    else
+                        echo "⚠️  Using local Docker for testing"
+                    fi
 
                     # Verify image exists
                     docker images | grep ${DOCKER_IMAGE} || {
-                        echo "❌ Image not found in Minikube Docker"
+                        echo "❌ Image not found"
+                        echo "Available images:"
+                        docker images
                         exit 1
                     }
 
@@ -119,22 +136,33 @@ pipeline {
             steps {
                 echo '📦 Verifying image in Minikube...'
                 sh """
-                    # Since we built with minikube docker-env, image should already be there
-                    eval \$(minikube docker-env)
+                    # Check if minikube is available
+                    if command -v minikube &> /dev/null; then
+                        echo "✅ Minikube found, verifying image"
 
-                    # Verify image exists in Minikube's Docker
-                    if docker images | grep -q ${DOCKER_IMAGE}; then
-                        echo "✅ Image found in Minikube Docker daemon"
-                        docker images | grep ${DOCKER_IMAGE}
-                    else
-                        echo "⚠️  Image not found, attempting to load..."
-                        # Fallback: try minikube image load
-                        minikube image load ${DOCKER_IMAGE}:latest || {
-                            echo "❌ Failed to load image to Minikube"
-                            echo "Available images in Minikube:"
-                            docker images
-                            exit 1
+                        # Since we built with minikube docker-env, image should already be there
+                        eval \$(minikube docker-env) || {
+                            echo "⚠️  Cannot set Minikube Docker env"
+                            exit 0
                         }
+
+                        # Verify image exists in Minikube's Docker
+                        if docker images | grep -q ${DOCKER_IMAGE}; then
+                            echo "✅ Image found in Minikube Docker daemon"
+                            docker images | grep ${DOCKER_IMAGE}
+                        else
+                            echo "⚠️  Image not found in Minikube Docker, attempting to load..."
+                            # Fallback: try minikube image load
+                            minikube image load ${DOCKER_IMAGE}:latest || {
+                                echo "❌ Failed to load image to Minikube"
+                                echo "Available images in Minikube:"
+                                docker images
+                                exit 1
+                            }
+                        fi
+                    else
+                        echo "⚠️  Minikube not available, skipping verification"
+                        echo "Image should be available in local Docker"
                     fi
                 """
             }
