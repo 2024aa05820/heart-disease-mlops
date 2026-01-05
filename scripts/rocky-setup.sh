@@ -11,6 +11,9 @@
 
 set -e
 
+# Ensure /usr/local/bin is in PATH
+export PATH="/usr/local/bin:$PATH"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -70,7 +73,7 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 rm -f kubectl
 echo -e "${GREEN}✅ kubectl installed:${NC}"
-kubectl version --client
+/usr/local/bin/kubectl version --client
 echo ""
 
 # Install Minikube
@@ -79,7 +82,7 @@ curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-
 install minikube-linux-amd64 /usr/local/bin/minikube
 rm -f minikube-linux-amd64
 echo -e "${GREEN}✅ Minikube installed:${NC}"
-minikube version
+/usr/local/bin/minikube version
 echo ""
 
 # Install Jenkins
