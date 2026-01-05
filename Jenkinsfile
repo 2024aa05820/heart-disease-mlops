@@ -179,20 +179,16 @@ pipeline {
                     echo "🧹 Cleaning up any existing test containers..."
                     docker ps -a | grep test-api- | awk '{print \$1}' | xargs -r docker rm -f 2>/dev/null || true
 
-                    # Also stop any containers using port 8001
-                    echo "🔍 Checking for containers using port 8001..."
-                    docker ps --filter "publish=8001" -q | xargs -r docker stop 2>/dev/null || true
-                    docker ps -a --filter "publish=8001" -q | xargs -r docker rm -f 2>/dev/null || true
-
-                    # Double check - remove any container with port 8001 in its config
-                    docker ps -a --format '{{.ID}} {{.Ports}}' | grep '8001' | awk '{print \$1}' | xargs -r docker rm -f 2>/dev/null || true
+                    # Check for any process using port 8000
+                    echo "🔍 Checking for processes using port 8000..."
+                    lsof -ti:8000 | xargs -r kill -9 2>/dev/null || true
 
                     # Wait a bit for port to be released
                     sleep 3
 
-                    # Start container
+                    # Start container with network mode host for better connectivity
                     echo "🚀 Starting container test-api-${BUILD_NUMBER}..."
-                    docker run -d --name test-api-${BUILD_NUMBER} -p 8001:8000 ${DOCKER_IMAGE}:${IMAGE_TAG}
+                    docker run -d --name test-api-${BUILD_NUMBER} --network host ${DOCKER_IMAGE}:${IMAGE_TAG}
 
                     # Check if container started
                     echo "📊 Container status:"
@@ -256,17 +252,17 @@ pipeline {
                     echo "✅ Internal health check passed!"
                     echo ""
 
-                    # Now test from host
-                    echo "Testing from host (port 8001)..."
+                    # Now test from host (using port 8000 since we're using --network host)
+                    echo "Testing from host (port 8000 with host network)..."
                     for i in 1 2 3 4 5; do
                         echo "Attempt \$i/5..."
 
                         # Check if port is actually listening
-                        echo "Checking port 8001..."
-                        netstat -tuln | grep 8001 || echo "Port 8001 not found in netstat"
+                        echo "Checking port 8000..."
+                        netstat -tuln | grep 8000 || echo "Port 8000 not found in netstat"
 
                         # Try to curl and show detailed output
-                        HTTP_CODE=\$(curl -s -o /tmp/health_response.txt -w "%{http_code}" http://localhost:8001/health)
+                        HTTP_CODE=\$(curl -s -o /tmp/health_response.txt -w "%{http_code}" http://localhost:8000/health)
                         echo "HTTP Status Code: \$HTTP_CODE"
 
                         if [ -f /tmp/health_response.txt ]; then
