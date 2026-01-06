@@ -59,36 +59,38 @@ Predict heart disease risk in patients based on clinical features using machine 
 
 ```mermaid
 flowchart TB
-    subgraph DEV["Development"]
-        direction TB
-        D1[Developer] -->|Push Code| D2[GitHub Repository]
+    %% Development
+    DEV[Developer] -->|1. Push Code| GH[GitHub]
+    
+    %% CI/CD triggers ML Pipeline
+    GH -->|2. Trigger| GA[GitHub Actions]
+    GH -->|2. Webhook| JEN[Jenkins]
+    
+    %% ML Pipeline integrated with CI/CD
+    GA -->|3. Process Data| DATA[Raw Data]
+    DATA -->|4. Train| TRAIN[Model Training]
+    TRAIN -->|5. Log Metrics| MLF[MLflow]
+    MLF -->|6. Register| REG[Model Registry]
+    
+    %% Build and Deploy
+    GA -->|7. Build| IMG[Docker Image]
+    REG -->|8. Include Model| IMG
+    JEN -->|9. Deploy| K8S[Kubernetes]
+    IMG -->|10. Push| K8S
+    
+    %% Kubernetes Services
+    subgraph CLUSTER["Kubernetes Cluster"]
+        API[API Service]
+        PROM[Prometheus]
+        GRAF[Grafana]
     end
     
-    subgraph CICD["CI/CD Pipeline"]
-        direction TB
-        C1[GitHub Actions] -->|Build| C2[Docker Image]
-        C3[Jenkins] -->|Deploy| C4[Kubernetes]
-    end
+    K8S --> API
+    API -->|Metrics| PROM
+    PROM -->|Visualize| GRAF
     
-    subgraph ML["ML Pipeline"]
-        direction TB
-        M1[Raw Data] -->|Process| M2[Training]
-        M2 -->|Log| M3[MLflow]
-        M3 -->|Register| M4[Model Registry]
-    end
-    
-    subgraph K8S["Kubernetes Cluster"]
-        direction TB
-        K1[API Service] -->|Metrics| K2[Prometheus]
-        K2 -->|Query| K3[Grafana]
-    end
-    
-    D2 -->|Trigger| C1
-    D2 -->|Webhook| C3
-    M4 -->|Load| K1
-    C4 -->|Deploy| K1
-    
-    U[End User] <-->|Predictions| K1
+    %% End User
+    USER[End User] <-->|11. Predictions| API
 ```
 
 ### Component Interaction Flow
