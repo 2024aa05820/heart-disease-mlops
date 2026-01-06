@@ -91,26 +91,26 @@ graph TB
     USER["👥 End User"] -->|HTTP Requests| API
     API -->|Predictions| USER
     
-    style DEV_GRP fill:#4FC3F7,stroke:#0277BD,stroke-width:3px,color:#000
-    style CICD fill:#FFB74D,stroke:#F57C00,stroke-width:3px,color:#000
-    style ML fill:#81C784,stroke:#388E3C,stroke-width:3px,color:#000
-    style K8S_GRP fill:#64B5F6,stroke:#1976D2,stroke-width:3px,color:#000
-    style MON_GRP fill:#BA68C8,stroke:#7B1FA2,stroke-width:3px,color:#000
-    style USER fill:#EF5350,stroke:#C62828,stroke-width:3px,color:#FFF
-    style DEV fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
-    style GIT fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
-    style GA fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
-    style JEN fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
-    style DOCKER fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
-    style K8S fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
-    style DATA fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
-    style TRAIN fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
-    style MLFLOW fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
-    style REGISTRY fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
-    style API fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px
-    style PROM fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px
-    style GRAF fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px
-    style DASH fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px
+    style DEV_GRP fill:#BBDEFB,stroke:#1976D2,stroke-width:3px,color:#000000
+    style CICD fill:#FFE0B2,stroke:#F57C00,stroke-width:3px,color:#000000
+    style ML fill:#C8E6C9,stroke:#388E3C,stroke-width:3px,color:#000000
+    style K8S_GRP fill:#90CAF9,stroke:#1976D2,stroke-width:3px,color:#000000
+    style MON_GRP fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px,color:#000000
+    style USER fill:#FFCDD2,stroke:#C62828,stroke-width:3px,color:#000000
+    style DEV fill:#FFFFFF,stroke:#1976D2,stroke-width:2px,color:#000000
+    style GIT fill:#FFFFFF,stroke:#1976D2,stroke-width:2px,color:#000000
+    style GA fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
+    style JEN fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
+    style DOCKER fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
+    style K8S fill:#FFFFFF,stroke:#1976D2,stroke-width:2px,color:#000000
+    style DATA fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
+    style TRAIN fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
+    style MLFLOW fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
+    style REGISTRY fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
+    style API fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
+    style PROM fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
+    style GRAF fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
+    style DASH fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
 ```
 
 ### Component Interaction Flow
@@ -184,19 +184,19 @@ graph TB
     PROM_POD -->|Scrape| API2
     GRAF_POD -->|Query| PROM_SVC
     
-    style K8S fill:#64B5F6,stroke:#1976D2,stroke-width:4px,color:#000
-    style APP fill:#81C784,stroke:#388E3C,stroke-width:4px,color:#000
-    style MON fill:#FFB74D,stroke:#F57C00,stroke-width:4px,color:#000
-    style ING_GRP fill:#BA68C8,stroke:#7B1FA2,stroke-width:4px,color:#000
-    style USER fill:#EF5350,stroke:#C62828,stroke-width:3px,color:#FFF
-    style API1 fill:#C8E6C9,stroke:#388E3C,stroke-width:2px
-    style API2 fill:#C8E6C9,stroke:#388E3C,stroke-width:2px
-    style API_SVC fill:#A5D6A7,stroke:#2E7D32,stroke-width:2px
-    style PROM_POD fill:#FFE0B2,stroke:#F57C00,stroke-width:2px
-    style PROM_SVC fill:#FFE0B2,stroke:#F57C00,stroke-width:2px
-    style GRAF_POD fill:#FFE0B2,stroke:#F57C00,stroke-width:2px
-    style GRAF_SVC fill:#FFE0B2,stroke:#F57C00,stroke-width:2px
-    style ING fill:#E1BEE7,stroke:#7B1FA2,stroke-width:2px
+    style K8S fill:#E3F2FD,stroke:#1976D2,stroke-width:4px,color:#000000
+    style APP fill:#E8F5E9,stroke:#388E3C,stroke-width:4px,color:#000000
+    style MON fill:#FFF3E0,stroke:#F57C00,stroke-width:4px,color:#000000
+    style ING_GRP fill:#F3E5F5,stroke:#7B1FA2,stroke-width:4px,color:#000000
+    style USER fill:#FFEBEE,stroke:#C62828,stroke-width:3px,color:#000000
+    style API1 fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
+    style API2 fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
+    style API_SVC fill:#FFFFFF,stroke:#2E7D32,stroke-width:2px,color:#000000
+    style PROM_POD fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
+    style PROM_SVC fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
+    style GRAF_POD fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
+    style GRAF_SVC fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
+    style ING fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
 ```
 
 ---
@@ -305,15 +305,15 @@ graph TB
         G --> H["🚀 Deploy to K8s"]
     end
     
-    style GA_PIPELINE fill:#4FC3F7,stroke:#0277BD,stroke-width:4px,color:#000
-    style A fill:#E3F2FD,stroke:#1976D2,stroke-width:3px
-    style B fill:#FFF3E0,stroke:#F57C00,stroke-width:3px
-    style C fill:#FFF3E0,stroke:#F57C00,stroke-width:3px
-    style D fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style E fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style F fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style G fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px
-    style H fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px
+    style GA_PIPELINE fill:#BBDEFB,stroke:#0277BD,stroke-width:4px,color:#000000
+    style A fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
+    style B fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style C fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style D fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style E fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style F fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style G fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
+    style H fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
 ```
 
 **Workflow File**: `.github/workflows/ci.yml`
@@ -356,15 +356,15 @@ graph TB
         G --> H["✅ Verify Deployment"]
     end
     
-    style JEN_PIPELINE fill:#FFB74D,stroke:#F57C00,stroke-width:4px,color:#000
-    style A fill:#E3F2FD,stroke:#1976D2,stroke-width:3px
-    style B fill:#FFF3E0,stroke:#F57C00,stroke-width:3px
-    style C fill:#FFF3E0,stroke:#F57C00,stroke-width:3px
-    style D fill:#FFF3E0,stroke:#F57C00,stroke-width:3px
-    style E fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style F fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style G fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px
-    style H fill:#A5D6A7,stroke:#2E7D32,stroke-width:3px
+    style JEN_PIPELINE fill:#FFE0B2,stroke:#F57C00,stroke-width:4px,color:#000000
+    style A fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
+    style B fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style C fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style D fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style E fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style F fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style G fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
+    style H fill:#FFFFFF,stroke:#2E7D32,stroke-width:3px,color:#000000
 ```
 
 **Setup Jenkins:**
@@ -423,13 +423,13 @@ graph TB
         E --> F["☸️ Deploy to K8s"]
     end
     
-    style HYBRID fill:#4FC3F7,stroke:#0277BD,stroke-width:4px,color:#000
-    style A fill:#E3F2FD,stroke:#1976D2,stroke-width:3px
-    style B fill:#BBDEFB,stroke:#0D47A1,stroke-width:3px
-    style C fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style D fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style E fill:#FFE0B2,stroke:#F57C00,stroke-width:3px
-    style F fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px
+    style HYBRID fill:#BBDEFB,stroke:#0277BD,stroke-width:4px,color:#000000
+    style A fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
+    style B fill:#FFFFFF,stroke:#0D47A1,stroke-width:3px,color:#000000
+    style C fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style D fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style E fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style F fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
 ```
 
 **Benefits:**
@@ -483,15 +483,15 @@ graph TB
         G --> H["⭐ Tag as Champion"]
     end
     
-    style ML_TRAIN fill:#81C784,stroke:#388E3C,stroke-width:4px,color:#000
-    style A fill:#E3F2FD,stroke:#1976D2,stroke-width:3px
-    style B fill:#FFF3E0,stroke:#F57C00,stroke-width:3px
-    style C fill:#FFF3E0,stroke:#F57C00,stroke-width:3px
-    style D fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style E fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style F fill:#FFE0B2,stroke:#F57C00,stroke-width:3px
-    style G fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px
-    style H fill:#F8BBD0,stroke:#C2185B,stroke-width:3px
+    style ML_TRAIN fill:#C8E6C9,stroke:#388E3C,stroke-width:4px,color:#000000
+    style A fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
+    style B fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style C fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style D fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style E fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style F fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style G fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
+    style H fill:#FFFFFF,stroke:#C2185B,stroke-width:3px,color:#000000
 ```
 
 ### Training Models
@@ -580,20 +580,20 @@ graph TB
         E --> E3["Hybrid"]
     end
     
-    style DEPLOY_OPT fill:#4FC3F7,stroke:#0277BD,stroke-width:4px,color:#000
-    style A fill:#BBDEFB,stroke:#0D47A1,stroke-width:3px
-    style B fill:#C8E6C9,stroke:#388E3C,stroke-width:3px
-    style C fill:#FFE0B2,stroke:#F57C00,stroke-width:3px
-    style D fill:#90CAF9,stroke:#1565C0,stroke-width:3px
-    style E fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px
-    style B1 fill:#A5D6A7,stroke:#2E7D32,stroke-width:2px
-    style C1 fill:#FFCC80,stroke:#E65100,stroke-width:2px
-    style C2 fill:#FFCC80,stroke:#E65100,stroke-width:2px
-    style D1 fill:#64B5F6,stroke:#0D47A1,stroke-width:2px
-    style D2 fill:#64B5F6,stroke:#0D47A1,stroke-width:2px
-    style E1 fill:#CE93D8,stroke:#4A148C,stroke-width:2px
-    style E2 fill:#CE93D8,stroke:#4A148C,stroke-width:2px
-    style E3 fill:#CE93D8,stroke:#4A148C,stroke-width:2px
+    style DEPLOY_OPT fill:#BBDEFB,stroke:#0277BD,stroke-width:4px,color:#000000
+    style A fill:#FFFFFF,stroke:#0D47A1,stroke-width:3px,color:#000000
+    style B fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
+    style C fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style D fill:#FFFFFF,stroke:#1565C0,stroke-width:3px,color:#000000
+    style E fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
+    style B1 fill:#FFFFFF,stroke:#2E7D32,stroke-width:2px,color:#000000
+    style C1 fill:#FFFFFF,stroke:#E65100,stroke-width:2px,color:#000000
+    style C2 fill:#FFFFFF,stroke:#E65100,stroke-width:2px,color:#000000
+    style D1 fill:#FFFFFF,stroke:#0D47A1,stroke-width:2px,color:#000000
+    style D2 fill:#FFFFFF,stroke:#0D47A1,stroke-width:2px,color:#000000
+    style E1 fill:#FFFFFF,stroke:#4A148C,stroke-width:2px,color:#000000
+    style E2 fill:#FFFFFF,stroke:#4A148C,stroke-width:2px,color:#000000
+    style E3 fill:#FFFFFF,stroke:#4A148C,stroke-width:2px,color:#000000
 ```
 
 ### 1. Local Development
@@ -724,13 +724,13 @@ graph TB
         ALERT -->|Trigger| NOTIFY["📢 Notifications"]
     end
     
-    style MON_STACK fill:#BA68C8,stroke:#7B1FA2,stroke-width:4px,color:#000
-    style API fill:#A5D6A7,stroke:#2E7D32,stroke-width:3px
-    style PROM fill:#FFB74D,stroke:#F57C00,stroke-width:3px
-    style GRAF fill:#64B5F6,stroke:#1976D2,stroke-width:3px
-    style DASH fill:#90CAF9,stroke:#1565C0,stroke-width:3px
-    style ALERT fill:#EF5350,stroke:#C62828,stroke-width:3px,color:#FFF
-    style NOTIFY fill:#E57373,stroke:#B71C1C,stroke-width:3px,color:#FFF
+    style MON_STACK fill:#E1BEE7,stroke:#7B1FA2,stroke-width:4px,color:#000000
+    style API fill:#FFFFFF,stroke:#2E7D32,stroke-width:3px,color:#000000
+    style PROM fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
+    style GRAF fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
+    style DASH fill:#FFFFFF,stroke:#1565C0,stroke-width:3px,color:#000000
+    style ALERT fill:#FFFFFF,stroke:#C62828,stroke-width:3px,color:#000000
+    style NOTIFY fill:#FFFFFF,stroke:#B71C1C,stroke-width:3px,color:#000000
 ```
 
 ### Prometheus
