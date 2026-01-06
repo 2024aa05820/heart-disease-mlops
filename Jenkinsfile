@@ -132,8 +132,11 @@ pipeline {
             steps {
                 echo '🏆 Promoting best model to Production...'
                 script {
-                    try {
-                        sh '''
+                    // Make this stage non-blocking - always succeed even if promotion fails
+                    // This is a known issue with MLflow FileStore backend RepresenterError
+                    def promotionResult = sh(
+                        script: '''
+                            set +e  # Don't exit on error
                             . venv/bin/activate
 
                             echo "========================================="
@@ -155,9 +158,8 @@ pipeline {
                             # Automatically find and promote the best model (ignore errors)
                             python scripts/promote-model.py --auto 2>&1 || {
                                 echo "⚠️  Auto-promotion failed, but continuing pipeline..."
-                                echo "   This is a known issue with MLflow FileStore backend."
-                                echo "   You can manually promote later using:"
-                                echo "   python scripts/promote-model.py <model-name>"
+                                echo "   This is a known issue with MLflow FileStore backend (RepresenterError)."
+                                echo "   The model is still registered and can be promoted manually via MLflow UI."
                                 echo "   Or via MLflow UI: http://<server-ip>:5001"
                             }
 
@@ -167,14 +169,19 @@ pipeline {
                             echo "========================================="
                             python scripts/promote-model.py --list 2>&1 || true
                             echo ""
-                        '''
-                    } catch (Exception e) {
-                        echo "⚠️  Model promotion stage encountered an error, but continuing pipeline..."
-                        echo "Error: ${e.message}"
-                        echo ""
+                            
+                            exit 0  # Always succeed
+                        ''',
+                        returnStatus: true
+                    )
+                    
+                    if (promotionResult != 0) {
+                        echo "⚠️  Model promotion encountered issues (exit code: ${promotionResult})"
                         echo "💡 This is a known issue with MLflow FileStore backend (RepresenterError)."
                         echo "   The model is still registered and can be promoted manually via MLflow UI."
                         echo "   Pipeline will continue to deployment stage."
+                    } else {
+                        echo "✅ Model promotion stage completed"
                     }
                 }
             }
