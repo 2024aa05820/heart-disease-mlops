@@ -131,58 +131,41 @@ pipeline {
         stage('Promote Best Model') {
             steps {
                 echo '🏆 Promoting best model to Production...'
-                script {
-                    // Make this stage non-blocking - always succeed even if promotion fails
-                    // This is a known issue with MLflow FileStore backend RepresenterError
-                    def promotionResult = sh(
-                        script: '''
-                            set +e  # Don't exit on error
-                            . venv/bin/activate
+                // Use catchError to ensure this stage never fails the build
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    sh '''
+                        . venv/bin/activate
 
-                            echo "========================================="
-                            echo "📊 MLflow Model Registry - Before Promotion"
-                            echo "========================================="
-                            echo ""
+                        echo "========================================="
+                        echo "📊 MLflow Model Registry - Before Promotion"
+                        echo "========================================="
+                        echo ""
 
-                            # List all registered models (ignore errors)
-                            python scripts/promote-model.py --list 2>&1 || {
-                                echo "⚠️  Could not list models (might be first run)"
-                            }
-                            echo ""
+                        # List all registered models (ignore errors)
+                        python scripts/promote-model.py --list 2>&1 || echo "⚠️  Could not list models"
+                        echo ""
 
-                            echo "========================================="
-                            echo "🏆 Auto-Promoting Best Model"
-                            echo "========================================="
-                            echo ""
+                        echo "========================================="
+                        echo "🏆 Auto-Promoting Best Model"
+                        echo "========================================="
+                        echo ""
 
-                            # Automatically find and promote the best model (ignore errors)
-                            python scripts/promote-model.py --auto 2>&1 || {
-                                echo "⚠️  Auto-promotion failed, but continuing pipeline..."
-                                echo "   This is a known issue with MLflow FileStore backend (RepresenterError)."
-                                echo "   The model is still registered and can be promoted manually via MLflow UI."
-                                echo "   Or via MLflow UI: http://<server-ip>:5001"
-                            }
+                        # Automatically find and promote the best model
+                        # If it fails, we just continue - model can be promoted manually
+                        python scripts/promote-model.py --auto 2>&1 || {
+                            echo ""
+                            echo "⚠️  Auto-promotion failed (RepresenterError is a known MLflow issue)"
+                            echo "   The model is registered and can be promoted manually via MLflow UI"
+                        }
 
-                            echo ""
-                            echo "========================================="
-                            echo "📊 MLflow Model Registry - After Promotion"
-                            echo "========================================="
-                            python scripts/promote-model.py --list 2>&1 || true
-                            echo ""
-                            
-                            exit 0  # Always succeed
-                        ''',
-                        returnStatus: true
-                    )
-                    
-                    if (promotionResult != 0) {
-                        echo "⚠️  Model promotion encountered issues (exit code: ${promotionResult})"
-                        echo "💡 This is a known issue with MLflow FileStore backend (RepresenterError)."
-                        echo "   The model is still registered and can be promoted manually via MLflow UI."
-                        echo "   Pipeline will continue to deployment stage."
-                    } else {
-                        echo "✅ Model promotion stage completed"
-                    }
+                        echo ""
+                        echo "========================================="
+                        echo "📊 MLflow Model Registry - After Promotion"
+                        echo "========================================="
+                        python scripts/promote-model.py --list 2>&1 || true
+                        echo ""
+                        echo "✅ Model promotion stage completed (check above for any warnings)"
+                    '''
                 }
             }
         }
