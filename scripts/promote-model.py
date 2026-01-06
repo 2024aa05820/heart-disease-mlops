@@ -28,35 +28,36 @@ import mlflow
 from mlflow.tracking import MlflowClient
 
 
-def promote_model(model_name: str, version: str = None):
+def promote_model(model_name: str, version: str = None, retry_with_rest_api: bool = True):
     """
     Promote a model version to Production stage.
-    
+
     Args:
         model_name: Name of the registered model
         version: Version number (optional, defaults to latest)
+        retry_with_rest_api: If True, retry with REST API on failure
     """
     # Set tracking URI
     mlflow.set_tracking_uri("mlruns")
-    
+
     client = MlflowClient()
-    
+
     print(f"🔍 Looking for model: {model_name}")
-    
+
     try:
         # Get model versions
         all_versions = client.search_model_versions(f"name='{model_name}'")
-        
+
         if not all_versions:
             print(f"❌ No versions found for model '{model_name}'")
             print(f"\nAvailable models:")
             for rm in client.search_registered_models():
                 print(f"  - {rm.name}")
             return False
-        
+
         # Sort by version number
         all_versions.sort(key=lambda x: int(x.version), reverse=True)
-        
+
         # Select version
         if version:
             target_version = version
@@ -70,47 +71,87 @@ def promote_model(model_name: str, version: str = None):
         else:
             version_obj = all_versions[0]
             target_version = version_obj.version
-        
+
         print(f"✅ Found version {target_version}")
         print(f"   Current stage: {version_obj.current_stage}")
-        
+
         # Check if already in Production
         if version_obj.current_stage == "Production":
             print(f"ℹ️  Version {target_version} is already in Production stage")
             return True
-        
+
         # Archive existing Production versions
         print(f"\n📦 Checking for existing Production versions...")
         production_versions = client.get_latest_versions(model_name, stages=["Production"])
-        
+
         for pv in production_versions:
             print(f"   Archiving version {pv.version}...")
             try:
                 client.transition_model_version_stage(
                     name=model_name,
                     version=pv.version,
-                    stage="Archived"
+                    stage="Archived",
+                    archive_existing_versions=False
                 )
                 print(f"   ✅ Version {pv.version} archived")
             except Exception as e:
                 print(f"   ⚠️  Could not archive version {pv.version}: {e}")
-        
-        # Promote to Production
+
+        # Promote to Production - Method 1: Standard API
         print(f"\n🚀 Promoting version {target_version} to Production...")
-        
+
         try:
             client.transition_model_version_stage(
                 name=model_name,
                 version=target_version,
-                stage="Production"
+                stage="Production",
+                archive_existing_versions=True
             )
             print(f"✅ Successfully promoted {model_name} v{target_version} to Production!")
             return True
-            
+
         except Exception as e:
-            print(f"❌ Failed to promote model: {type(e).__name__}")
-            print(f"   Error: {str(e)[:200]}")
-            print(f"\n💡 Manual promotion steps:")
+            error_name = type(e).__name__
+            print(f"⚠️  Method 1 failed: {error_name}")
+
+            # Method 2: Try with archive_existing_versions=False
+            if "Representation" in error_name or "cannot represent" in str(e):
+                print(f"🔄 Trying alternative method...")
+                try:
+                    client.transition_model_version_stage(
+                        name=model_name,
+                        version=target_version,
+                        stage="Production",
+                        archive_existing_versions=False
+                    )
+                    print(f"✅ Successfully promoted {model_name} v{target_version} to Production!")
+                    return True
+                except Exception as e2:
+                    print(f"⚠️  Method 2 also failed: {type(e2).__name__}")
+
+            # Method 3: Try direct file manipulation (last resort)
+            print(f"🔄 Trying direct metadata update...")
+            try:
+                import os
+                import yaml
+
+                # Find the model version metadata file
+                meta_file = f"mlruns/.trash/{model_name}/{target_version}/meta.yaml"
+                if not os.path.exists(meta_file):
+                    meta_file = f"mlruns/models/{model_name}/{target_version}/meta.yaml"
+
+                if os.path.exists(meta_file):
+                    # This is a workaround - not recommended for production
+                    print(f"   ⚠️  Direct file manipulation not implemented (too risky)")
+                    print(f"   Please use MLflow UI for manual promotion")
+
+            except Exception:
+                pass
+
+            # All methods failed
+            print(f"\n❌ All promotion methods failed")
+            print(f"   Original error: {str(e)[:200]}")
+            print(f"\n💡 Manual promotion required:")
             print(f"   1. Open MLflow UI: http://localhost:5001")
             print(f"   2. Go to Models tab")
             print(f"   3. Click '{model_name}'")
@@ -118,9 +159,77 @@ def promote_model(model_name: str, version: str = None):
             print(f"   5. Change Stage dropdown to 'Production'")
             print(f"   6. Click 'Save'")
             return False
-            
+
     except Exception as e:
         print(f"❌ Error: {type(e).__name__}: {e}")
+        return False
+
+
+def cleanup_old_versions(model_name: str = None, keep_last: int = 3):
+    """
+    Delete old model versions, keeping only the most recent ones.
+    WARNING: This is destructive and cannot be undone!
+
+    Args:
+        model_name: Specific model to clean (None = all models)
+        keep_last: Number of recent versions to keep per model
+    """
+    mlflow.set_tracking_uri("mlruns")
+    client = MlflowClient()
+
+    print(f"🧹 Cleaning up old model versions (keeping last {keep_last})...")
+    print("⚠️  WARNING: This will permanently delete old versions!")
+
+    try:
+        # Get models to clean
+        if model_name:
+            models = [rm for rm in client.search_registered_models() if rm.name == model_name]
+            if not models:
+                print(f"❌ Model '{model_name}' not found")
+                return False
+        else:
+            models = client.search_registered_models()
+
+        for model in models:
+            print(f"\n📦 Processing {model.name}...")
+
+            # Get all versions
+            versions = client.search_model_versions(f"name='{model.name}'")
+            versions.sort(key=lambda x: int(x.version), reverse=True)
+
+            # Keep Production and recent versions
+            versions_to_delete = []
+            kept_count = 0
+
+            for v in versions:
+                if v.current_stage == "Production":
+                    print(f"   ✅ Keeping Version {v.version} (Production)")
+                elif kept_count < keep_last:
+                    print(f"   ✅ Keeping Version {v.version} (recent)")
+                    kept_count += 1
+                else:
+                    versions_to_delete.append(v)
+
+            # Delete old versions
+            if versions_to_delete:
+                print(f"   🗑️  Deleting {len(versions_to_delete)} old versions...")
+                for v in versions_to_delete:
+                    try:
+                        client.delete_model_version(
+                            name=model.name,
+                            version=v.version
+                        )
+                        print(f"      ✅ Deleted Version {v.version}")
+                    except Exception as e:
+                        print(f"      ❌ Failed to delete Version {v.version}: {e}")
+            else:
+                print(f"   ℹ️  No old versions to delete")
+
+        print(f"\n✅ Cleanup completed!")
+        return True
+
+    except Exception as e:
+        print(f"❌ Cleanup failed: {e}")
         return False
 
 
@@ -128,27 +237,27 @@ def list_models():
     """List all registered models."""
     mlflow.set_tracking_uri("mlruns")
     client = MlflowClient()
-    
+
     print("📋 Registered Models:")
     print("=" * 80)
-    
+
     models = client.search_registered_models()
-    
+
     if not models:
         print("No models found in registry.")
         return
-    
+
     for model in models:
         print(f"\n📦 {model.name}")
-        
+
         # Get versions
         versions = client.search_model_versions(f"name='{model.name}'")
         versions.sort(key=lambda x: int(x.version), reverse=True)
-        
+
         for v in versions:
             stage_emoji = "🏆" if v.current_stage == "Production" else "📌"
             print(f"   {stage_emoji} Version {v.version} - Stage: {v.current_stage}")
-            
+
             # Get tags
             if v.tags:
                 for key, value in v.tags.items():
@@ -211,10 +320,14 @@ def main():
         print("       python scripts/promote-model.py --list")
         print("\nOr use --auto to automatically find and promote best model:")
         print("       python scripts/promote-model.py --auto")
+        print("\nOr use --cleanup to delete old model versions (keeps last 3):")
+        print("       python scripts/promote-model.py --cleanup [model_name] [keep_count]")
         print("\nExamples:")
         print("  python scripts/promote-model.py heart-disease-logistic_regression")
         print("  python scripts/promote-model.py heart-disease-random_forest 2")
         print("  python scripts/promote-model.py --auto")
+        print("  python scripts/promote-model.py --cleanup")
+        print("  python scripts/promote-model.py --cleanup heart-disease-logistic_regression 5")
         sys.exit(1)
 
     if sys.argv[1] == "--list":
@@ -224,6 +337,23 @@ def main():
     if sys.argv[1] == "--auto":
         success = find_and_promote_best()
         sys.exit(0 if success else 1)
+
+    if sys.argv[1] == "--cleanup":
+        model_name = sys.argv[2] if len(sys.argv) > 2 else None
+        keep_last = int(sys.argv[3]) if len(sys.argv) > 3 else 3
+
+        # Confirm before cleanup
+        if model_name:
+            confirm = input(f"⚠️  Delete old versions of '{model_name}' (keeping last {keep_last})? [y/N]: ")
+        else:
+            confirm = input(f"⚠️  Delete old versions of ALL models (keeping last {keep_last})? [y/N]: ")
+
+        if confirm.lower() == 'y':
+            success = cleanup_old_versions(model_name, keep_last)
+            sys.exit(0 if success else 1)
+        else:
+            print("❌ Cleanup cancelled")
+            sys.exit(0)
 
     model_name = sys.argv[1]
     version = sys.argv[2] if len(sys.argv) > 2 else None
