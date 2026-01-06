@@ -48,6 +48,31 @@ sudo ./scripts/rocky-setup.sh --update
 
 ---
 
+## 🚀 Start All Services (One Command!)
+
+After the initial setup, you can start all services with a single command:
+
+```bash
+# Start everything: Docker, Minikube, Jenkins, MLflow, Monitoring
+./scripts/start-all-services.sh
+```
+
+This will:
+- ✅ Start Docker service
+- ✅ Start Minikube cluster
+- ✅ Start Jenkins
+- ✅ Configure Jenkins for Minikube
+- ✅ Start MLflow UI
+- ✅ Optionally deploy monitoring stack
+
+To stop all services:
+
+```bash
+./scripts/stop-all-services.sh
+```
+
+---
+
 ## 🎯 After Setup
 
 ### 1. Configure Jenkins
@@ -120,6 +145,18 @@ kubectl port-forward service/heart-disease-api-service 8000:80
 ## 🔧 Common Commands
 
 ```bash
+# Start all services
+./scripts/start-all-services.sh
+
+# Stop all services
+./scripts/stop-all-services.sh
+
+# Check all services status
+./scripts/check-all-services.sh
+
+# Verify Docker access
+./scripts/verify-docker-access.sh
+
 # Check Minikube status
 minikube status
 
