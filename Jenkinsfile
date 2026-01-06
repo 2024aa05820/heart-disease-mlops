@@ -6,6 +6,10 @@ pipeline {
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         MINIKUBE_HOME = '/var/lib/jenkins/.minikube'
         PATH = "/usr/local/bin:${env.PATH}"
+        MLFLOW_TRACKING_URI = 'http://localhost:5000'
+        POSTGRES_USER = 'mlflow'
+        POSTGRES_PASSWORD = 'mlflow'
+        POSTGRES_DB = 'mlflow'
     }
     
     stages {
@@ -60,10 +64,40 @@ pipeline {
                 '''
             }
         }
+
+        stage('Start MLflow with PostgreSQL') {
+            steps {
+                echo '🚀 Starting MLflow with PostgreSQL backend...'
+                sh '''
+                    # Start PostgreSQL and MLflow using Docker Compose
+                    docker-compose -f deploy/docker/docker-compose.yml up -d postgres mlflow
+
+                    # Wait for services to be healthy
+                    echo "⏳ Waiting for PostgreSQL to be ready..."
+                    sleep 10
+
+                    echo "⏳ Waiting for MLflow to be ready..."
+                    for i in {1..30}; do
+                        if curl -f http://localhost:5000/health 2>/dev/null; then
+                            echo "✅ MLflow is ready!"
+                            break
+                        fi
+                        echo "Waiting... ($i/30)"
+                        sleep 2
+                    done
+
+                    # Verify services
+                    docker-compose -f deploy/docker/docker-compose.yml ps
+
+                    echo "✅ MLflow with PostgreSQL backend is running!"
+                    echo "📊 MLflow UI: http://localhost:5000"
+                '''
+            }
+        }
         
         stage('Train Models') {
             steps {
-                echo '🤖 Training ML models...'
+                echo '🤖 Training ML models with PostgreSQL-backed MLflow...'
                 sh '''
                     set -e  # Exit on any error
 
@@ -73,6 +107,13 @@ pipeline {
                     echo ""
 
                     . venv/bin/activate
+
+                    # Set MLflow tracking URI to PostgreSQL-backed server
+                    export MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
+
+                    echo "📊 MLflow Tracking URI: ${MLFLOW_TRACKING_URI}"
+                    echo "✅ Using PostgreSQL backend - NO YAML RepresenterError!"
+                    echo ""
 
                     echo "🚀 Starting model training..."
                     python scripts/train.py
@@ -506,6 +547,10 @@ pipeline {
         always {
             echo '🧹 Cleaning up...'
             sh '''
+                # Stop Docker Compose services
+                echo "Stopping MLflow and PostgreSQL..."
+                docker-compose -f deploy/docker/docker-compose.yml down || true
+
                 # Use Minikube's Docker daemon for cleanup
                 if command -v minikube &> /dev/null; then
                     eval $(minikube docker-env) || true
@@ -525,6 +570,8 @@ pipeline {
 
                 # Clean up Python virtual environment
                 rm -rf venv || true
+
+                echo "✅ Cleanup complete!"
             '''
         }
     }

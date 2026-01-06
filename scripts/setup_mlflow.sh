@@ -1,6 +1,6 @@
 #!/bin/bash
-# Complete MLflow Setup Script
-# This script downloads data, trains models, and starts MLflow UI
+# Complete MLflow Setup Script with PostgreSQL Backend
+# This script starts PostgreSQL + MLflow, downloads data, and trains models
 
 set -e  # Exit on error
 
@@ -12,8 +12,11 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}MLflow Complete Setup Script${NC}"
+echo -e "${BLUE}MLflow Complete Setup (PostgreSQL)${NC}"
 echo -e "${BLUE}========================================${NC}\n"
+
+echo -e "${YELLOW}⚠️  DEPRECATED: Use ./scripts/setup-postgresql-mlflow.sh instead${NC}"
+echo -e "${YELLOW}This script is kept for backward compatibility${NC}\n"
 
 # Check if we're in the right directory
 if [ ! -f "requirements.txt" ]; then
@@ -61,38 +64,21 @@ else
     exit 1
 fi
 
-# Step 3: Verify MLflow runs
-echo -e "${BLUE}Step 3: Verifying MLflow experiments...${NC}"
-if [ -d "mlruns" ]; then
-    RUN_COUNT=$(find mlruns -type d -name "meta.yaml" | wc -l)
-    echo -e "${GREEN}✓ MLflow experiments created${NC}"
-    echo -e "${GREEN}  Found experiment runs in mlruns/${NC}\n"
-else
-    echo -e "${RED}✗ MLflow runs not found${NC}"
-    exit 1
-fi
+# Step 3: Start PostgreSQL + MLflow
+echo -e "${BLUE}Step 3: Starting PostgreSQL + MLflow...${NC}"
+./scripts/setup-postgresql-mlflow.sh
 
-# Step 4: Instructions for starting MLflow UI
+# Step 4: Instructions
 echo -e "${BLUE}========================================${NC}"
 echo -e "${GREEN}✓ Setup Complete!${NC}"
 echo -e "${BLUE}========================================${NC}\n"
 
-echo -e "${YELLOW}To start MLflow UI, run:${NC}"
-echo -e "${BLUE}  mlflow ui --host 0.0.0.0 --port 5000${NC}\n"
+echo -e "${GREEN}MLflow UI is running at: http://localhost:5000${NC}"
+echo -e "${GREEN}PostgreSQL backend - No YAML errors!${NC}\n"
 
-echo -e "${YELLOW}Then access from your browser:${NC}"
-echo -e "${BLUE}  http://<YOUR_SERVER_IP>:5000${NC}\n"
-
-echo -e "${YELLOW}Or use SSH port forwarding from your local machine:${NC}"
-echo -e "${BLUE}  ssh -L 5000:localhost:5000 user@remote-server${NC}"
-echo -e "${BLUE}  Then access: http://localhost:5000${NC}\n"
-
-# Ask if user wants to start MLflow UI now
-read -p "Start MLflow UI now? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo -e "\n${GREEN}Starting MLflow UI...${NC}"
-    echo -e "${YELLOW}Press Ctrl+C to stop${NC}\n"
-    mlflow ui --host 0.0.0.0 --port 5000
-fi
+echo -e "${YELLOW}Next steps:${NC}"
+echo -e "  1. Train models: python src/models/train.py"
+echo -e "  2. View experiments: http://localhost:5000"
+echo -e "  3. Start API: docker-compose -f deploy/docker/docker-compose.yml up -d api"
+echo ""
 

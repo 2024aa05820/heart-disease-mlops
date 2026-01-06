@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Start MLflow UI
-# Run this on the Jenkins server
+# Start MLflow UI with PostgreSQL Backend
+# DEPRECATED: Use ./scripts/setup-postgresql-mlflow.sh instead
 
 # Don't exit on error for initial checks
 # set -e
@@ -12,6 +12,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
+
+echo -e "${YELLOW}⚠️  DEPRECATED: This script uses FileStore backend${NC}"
+echo -e "${YELLOW}Use ./scripts/setup-postgresql-mlflow.sh for PostgreSQL backend${NC}"
+echo -e "${YELLOW}PostgreSQL eliminates YAML RepresenterError issues${NC}\n"
 
 MLFLOW_PORT=5001
 MLFLOW_HOST="0.0.0.0"

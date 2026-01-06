@@ -55,8 +55,10 @@ model:
   cv_folds: 5
 
 # MLflow configuration
+# Use PostgreSQL backend to avoid YAML RepresenterError
+# Set MLFLOW_TRACKING_URI environment variable to override
 mlflow:
-  tracking_uri: "mlruns"
+  tracking_uri: "http://localhost:5000"  # PostgreSQL-backed MLflow server
   experiment_name: "heart-disease-classification"
 
 # API configuration

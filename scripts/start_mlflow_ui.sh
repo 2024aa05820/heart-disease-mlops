@@ -2,9 +2,13 @@
 
 ################################################################################
 # Heart Disease MLOps - MLflow UI Startup Script
-# 
+#
+# ⚠️  DEPRECATED: This script uses FileStore backend
+# Use ./scripts/setup-postgresql-mlflow.sh for PostgreSQL backend
+# PostgreSQL eliminates YAML RepresenterError issues
+#
 # This script starts the MLflow UI server on the remote machine
-# 
+#
 # Usage:
 #   ./scripts/start_mlflow_ui.sh [options]
 #
@@ -18,6 +22,12 @@
 ################################################################################
 
 set -e  # Exit on error
+
+# Show deprecation warning
+echo "⚠️  DEPRECATED: This script uses FileStore backend"
+echo "Use ./scripts/setup-postgresql-mlflow.sh for PostgreSQL backend"
+echo "PostgreSQL eliminates YAML RepresenterError issues"
+echo ""
 
 # Colors for output
 RED='\033[0;31m'
