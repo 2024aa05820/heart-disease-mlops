@@ -386,63 +386,45 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
 
             print(f"   Found version {latest_version}, current stage: {latest_version_obj.current_stage}")
 
-            # Tag the model as the best model
+            # Tag the model as the best model (ALL TAGS MUST BE STRINGS for FileStore YAML)
             try:
+                # CRITICAL: All tag values MUST be strings to avoid YAML RepresenterError
                 client.set_model_version_tag(
                     name=registered_model_name,
-                    version=latest_version,
+                    version=str(latest_version),  # Ensure version is string
                     key="best_model",
-                    value="true"
+                    value="true"  # String, not boolean
                 )
                 client.set_model_version_tag(
                     name=registered_model_name,
-                    version=latest_version,
+                    version=str(latest_version),
                     key="roc_auc",
-                    value=str(best_metrics['roc_auc'])
+                    value=str(best_metrics['roc_auc'])  # String, not float
+                )
+                client.set_model_version_tag(
+                    name=registered_model_name,
+                    version=str(latest_version),
+                    key="model_type",
+                    value=str(best_model_name)  # String
                 )
                 print(f"   ✅ Tagged version {latest_version} as best model")
             except Exception as tag_error:
                 print(f"   ⚠️  Could not tag model: {tag_error}")
 
-            # Try to transition to Production
-            if latest_version_obj.current_stage != "Production":
-                try:
-                    # Archive existing Production versions first
-                    production_versions = client.get_latest_versions(
-                        registered_model_name,
-                        stages=["Production"]
-                    )
-                    for pv in production_versions:
-                        print(f"   Archiving previous Production version {pv.version}...")
-                        try:
-                            client.transition_model_version_stage(
-                                name=registered_model_name,
-                                version=pv.version,
-                                stage="Archived"
-                            )
-                        except Exception:
-                            pass  # Ignore errors archiving old versions
-
-                    # Now transition the new version to Production
-                    print(f"   Transitioning version {latest_version} to Production...")
-                    client.transition_model_version_stage(
-                        name=registered_model_name,
-                        version=latest_version,
-                        stage="Production"
-                    )
-                    print(f"   ✅ Model {registered_model_name} v{latest_version} promoted to Production")
-
-                except Exception as transition_error:
-                    # Stage transition failed, but model is registered and tagged
-                    print(f"   ⚠️  Automatic stage transition failed: {type(transition_error).__name__}")
-                    print(f"   ℹ️  Model is registered and tagged as 'best_model=true'")
-                    print(f"   ℹ️  Please manually set stage to 'Production' in MLflow UI:")
-                    print(f"      1. Go to MLflow UI → Models tab")
-                    print(f"      2. Click '{registered_model_name}'")
-                    print(f"      3. Click 'Version {latest_version}'")
-                    print(f"      4. Change Stage to 'Production'")
-            else:
-                print(f"   ℹ️  Model {registered_model_name} v{latest_version} already in Production")
+            # Use ALIAS instead of STAGE (avoids FileStore YAML RepresenterError)
+            # Aliases are simpler and don't have the YAML serialization issues
+            try:
+                print(f"   Setting 'champion' alias for version {latest_version}...")
+                client.set_registered_model_alias(
+                    name=registered_model_name,
+                    alias="champion",
+                    version=str(latest_version)
+                )
+                print(f"   ✅ Model {registered_model_name} v{latest_version} aliased as 'champion'")
+                print(f"   ℹ️  Load with: models:/{registered_model_name}@champion")
+            except Exception as alias_error:
+                print(f"   ⚠️  Could not set alias: {alias_error}")
+                print(f"   ℹ️  Model is still registered and tagged as 'best_model=true'")
         else:
             print(f"   ⚠️  No versions found for {registered_model_name}")
             print(f"   Model registration may still be in progress.")

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Complete ML Workflow: Train → Register → Promote → Deploy
+# Complete ML Workflow: Train → Register → Deploy
 # This script runs the entire ML pipeline from training to deployment
 
 set -e
@@ -26,10 +26,9 @@ echo ""
 echo "This script will:"
 echo "  1. Start MLflow tracking server"
 echo "  2. Train multiple models"
-echo "  3. Register best model"
-echo "  4. Promote to Production"
-echo "  5. Build Docker image"
-echo "  6. Deploy to Kubernetes"
+echo "  3. Register best model (auto-tagged as 'champion')"
+echo "  4. Build Docker image"
+echo "  5. Deploy to Kubernetes"
 echo ""
 read -p "Continue? (y/n) " -n 1 -r
 echo
@@ -102,36 +101,14 @@ echo ""
 print_info "Checking registered models..."
 python scripts/promote-model.py --list
 
+print_success "Best model automatically tagged as 'champion' during training!"
 echo ""
-echo "========================================="
-echo "Step 4: Promote Best Model"
-echo "========================================="
+echo "ℹ️  Model can be loaded with: models:/heart-disease-<model_name>@champion"
 echo ""
-
-print_info "Promoting best model to Production..."
-python scripts/promote-model.py --auto
-
-if [ $? -eq 0 ]; then
-    print_success "Model promoted successfully!"
-else
-    print_warning "Auto-promotion failed. You may need to promote manually."
-    echo ""
-    echo "Manual promotion:"
-    echo "  1. Visit MLflow UI: http://localhost:5000"
-    echo "  2. Go to Models tab"
-    echo "  3. Select the model with highest ROC-AUC"
-    echo "  4. Click 'Stage' → 'Transition to Production'"
-    echo ""
-    read -p "Continue anyway? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
-fi
 
 echo ""
 echo "========================================="
-echo "Step 5: Build Docker Image"
+echo "Step 4: Build Docker Image"
 echo "========================================="
 echo ""
 
@@ -155,7 +132,7 @@ fi
 
 echo ""
 echo "========================================="
-echo "Step 6: Deploy to Kubernetes"
+echo "Step 5: Deploy to Kubernetes"
 echo "========================================="
 echo ""
 

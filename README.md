@@ -6,7 +6,7 @@ A production-ready machine learning solution for predicting heart disease risk, 
 
 ## 🚀 Quick Start
 
-### Complete ML Workflow (Train → Promote → Deploy)
+### Complete ML Workflow (Train → Deploy)
 
 **⚠️ IMPORTANT:** You must train models before deployment!
 
@@ -22,14 +22,13 @@ pip install -r requirements.txt
 ./scripts/complete-ml-workflow.sh
 
 # Option 2: Step-by-step
-./scripts/train-and-register.sh          # Train & register models
-python scripts/promote-model.py --auto   # Promote best model
+./scripts/train-and-register.sh          # Train & register models (auto-tags best model)
 docker build -t heart-disease-api:latest .
 kubectl apply -f deploy/k8s/
 ```
 
 **📖 Guides:**
-- **Model Training & Promotion:** [MODEL-PROMOTION-QUICK-FIX.md](MODEL-PROMOTION-QUICK-FIX.md)
+- **Model Training:** [docs/MLFLOW-FILESTORE-YAML-FIX.md](docs/MLFLOW-FILESTORE-YAML-FIX.md)
 - **Rocky Linux Setup:** [ROCKY_LINUX_QUICKSTART.md](ROCKY_LINUX_QUICKSTART.md)
 - **Deployment Options:** [DEPLOYMENT_OPTIONS_SUMMARY.md](DEPLOYMENT_OPTIONS_SUMMARY.md)
 
