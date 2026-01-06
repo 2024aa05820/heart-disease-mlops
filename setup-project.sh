@@ -97,17 +97,17 @@ echo -e "${BLUE}STEP 1: Installing System Dependencies${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo ""
 
-echo -e "${YELLOW}📦 Updating system packages...${NC}"
-yum update -y > /dev/null 2>&1
+echo -e "${YELLOW}📦 Updating system packages (this may take a few minutes)...${NC}"
+yum update -y --skip-broken 2>&1 | grep -E "^(Complete|Error|Nothing)" || echo "Updating..."
 
 echo -e "${YELLOW}📦 Installing development tools...${NC}"
-yum groupinstall -y "Development Tools" > /dev/null 2>&1
+yum groupinstall -y "Development Tools" 2>&1 | grep -E "^(Complete|Error|Nothing|Already)" || echo "Installing..."
 
 echo -e "${YELLOW}📦 Installing Python 3.9...${NC}"
-yum install -y python39 python39-devel python39-pip > /dev/null 2>&1
+yum install -y python39 python39-devel python39-pip 2>&1 | grep -E "^(Complete|Error|Nothing|Already)" || echo "Installing..."
 
 echo -e "${YELLOW}📦 Installing Git...${NC}"
-yum install -y git > /dev/null 2>&1
+yum install -y git 2>&1 | grep -E "^(Complete|Error|Nothing|Already)" || echo "Installing..."
 
 echo -e "${YELLOW}📦 Installing system libraries...${NC}"
 yum install -y \
@@ -120,7 +120,7 @@ yum install -y \
     zlib-devel \
     wget \
     curl \
-    > /dev/null 2>&1
+    2>&1 | grep -E "^(Complete|Error|Nothing|Already)" || echo "Installing..."
 
 echo -e "${GREEN}✅ System dependencies installed${NC}"
 echo ""
@@ -209,18 +209,24 @@ sudo -u $ACTUAL_USER python3.9 -m venv $VENV_DIR
 echo -e "${GREEN}✅ Virtual environment created${NC}"
 
 echo -e "${YELLOW}📦 Upgrading pip...${NC}"
-sudo -u $ACTUAL_USER $VENV_DIR/bin/pip install --upgrade pip > /dev/null 2>&1
+sudo -u $ACTUAL_USER $VENV_DIR/bin/pip install --upgrade pip --quiet
 echo -e "${GREEN}✅ Pip upgraded${NC}"
 
-echo -e "${YELLOW}📦 Installing project dependencies...${NC}"
-sudo -u $ACTUAL_USER $VENV_DIR/bin/pip install -r requirements.txt > /dev/null 2>&1
-echo -e "${GREEN}✅ Project dependencies installed${NC}"
+echo -e "${YELLOW}📦 Installing project dependencies (this may take 2-3 minutes)...${NC}"
+sudo -u $ACTUAL_USER $VENV_DIR/bin/pip install -r requirements.txt --quiet
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✅ Project dependencies installed${NC}"
+else
+    echo -e "${RED}❌ Failed to install dependencies${NC}"
+    echo -e "${YELLOW}Trying without --quiet flag...${NC}"
+    sudo -u $ACTUAL_USER $VENV_DIR/bin/pip install -r requirements.txt
+fi
 
 echo -e "${YELLOW}📦 Installing MLflow and database drivers...${NC}"
 if [ "$USE_SQLITE" = false ]; then
-    sudo -u $ACTUAL_USER $VENV_DIR/bin/pip install mlflow psycopg2-binary > /dev/null 2>&1
+    sudo -u $ACTUAL_USER $VENV_DIR/bin/pip install mlflow psycopg2-binary --quiet
 else
-    sudo -u $ACTUAL_USER $VENV_DIR/bin/pip install mlflow > /dev/null 2>&1
+    sudo -u $ACTUAL_USER $VENV_DIR/bin/pip install mlflow --quiet
 fi
 echo -e "${GREEN}✅ MLflow installed${NC}"
 echo ""
