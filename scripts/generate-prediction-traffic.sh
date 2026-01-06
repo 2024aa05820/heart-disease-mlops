@@ -24,6 +24,20 @@ LOG_RESPONSES="${LOG_RESPONSES:-false}"
 REQUEST_COUNT=0
 SUCCESS_COUNT=0
 ERROR_COUNT=0
+VALID_COUNT=0
+INVALID_COUNT=0
+
+# Error injection rate (0-100, percentage of requests that should be invalid)
+ERROR_RATE="${ERROR_RATE:-10}"  # 10% invalid requests by default
+
+# Error types generated:
+# 0: Missing required field (trestbps)
+# 1: Out of range age (> 120)
+# 2: High cholesterol (550 - valid but edge case, user example)
+# 3: Invalid type (string instead of number)
+# 4: Out of range cp (> 3)
+# 5: Out of range chol (> 600)
+# 6: User-provided example (high cholesterol case)
 
 # Trap Ctrl+C to show summary
 trap 'show_summary; exit 0' INT TERM
@@ -39,14 +53,19 @@ show_summary() {
     echo "📊 Traffic Generation Summary"
     echo "========================================="
     echo "Total Requests:  $REQUEST_COUNT"
+    echo "Valid Requests:  $VALID_COUNT"
+    echo "Invalid Requests: $INVALID_COUNT"
     echo "Successful:      $SUCCESS_COUNT"
     echo "Errors:          $ERROR_COUNT"
-    echo "Success Rate:    $(( SUCCESS_COUNT * 100 / REQUEST_COUNT ))%"
+    if [ $REQUEST_COUNT -gt 0 ]; then
+        echo "Success Rate:    $(( SUCCESS_COUNT * 100 / REQUEST_COUNT ))%"
+        echo "Error Rate:      $(( ERROR_COUNT * 100 / REQUEST_COUNT ))%"
+    fi
     echo "========================================="
 }
 
-# Generate random patient data
-generate_patient_data() {
+# Generate random patient data (valid)
+generate_valid_patient_data() {
     # Age: 20-80 (realistic range)
     age=$((RANDOM % 61 + 20))
     
@@ -106,6 +125,179 @@ generate_patient_data() {
 EOF
 }
 
+# Generate invalid patient data (for error testing)
+generate_invalid_patient_data() {
+    local error_type=$((RANDOM % 7))
+    
+    case $error_type in
+        0)
+            # Missing required field
+            age=$((RANDOM % 61 + 20))
+            sex=$((RANDOM % 2))
+            cp=$((RANDOM % 4))
+            # Missing trestbps
+            chol=$((RANDOM % 151 + 150))
+            fbs=$((RANDOM % 2))
+            restecg=$((RANDOM % 3))
+            thalach=$((RANDOM % 101 + 100))
+            exang=$((RANDOM % 2))
+            oldpeak=$(awk "BEGIN {printf \"%.1f\", $RANDOM/8192}")
+            slope=$((RANDOM % 3))
+            ca=$((RANDOM % 4))
+            thal=$((RANDOM % 4))
+            cat <<EOF
+{
+  "age": $age,
+  "sex": $sex,
+  "cp": $cp,
+  "chol": $chol,
+  "fbs": $fbs,
+  "restecg": $restecg,
+  "thalach": $thalach,
+  "exang": $exang,
+  "oldpeak": $oldpeak,
+  "slope": $slope,
+  "ca": $ca,
+  "thal": $thal
+}
+EOF
+            ;;
+        1)
+            # Out of range value (age > 120)
+            cat <<EOF
+{
+  "age": 150,
+  "sex": 1,
+  "cp": 2,
+  "trestbps": 145,
+  "chol": 233,
+  "fbs": 1,
+  "restecg": 0,
+  "thalach": 150,
+  "exang": 0,
+  "oldpeak": 2.3,
+  "slope": 0,
+  "ca": 0,
+  "thal": 1
+}
+EOF
+            ;;
+        2)
+            # Out of range value (chol > 600) - using user's example with high cholesterol
+            cat <<EOF
+{
+  "age": 78,
+  "sex": 1,
+  "cp": 2,
+  "trestbps": 145,
+  "chol": 550,
+  "fbs": 1,
+  "restecg": 0,
+  "thalach": 150,
+  "exang": 0,
+  "oldpeak": 2.3,
+  "slope": 0,
+  "ca": 0,
+  "thal": 1
+}
+EOF
+            ;;
+        3)
+            # Invalid type (string instead of number)
+            cat <<EOF
+{
+  "age": "sixty",
+  "sex": 1,
+  "cp": 2,
+  "trestbps": 145,
+  "chol": 233,
+  "fbs": 1,
+  "restecg": 0,
+  "thalach": 150,
+  "exang": 0,
+  "oldpeak": 2.3,
+  "slope": 0,
+  "ca": 0,
+  "thal": 1
+}
+EOF
+            ;;
+        4)
+            # Out of range value (cp > 3)
+            cat <<EOF
+{
+  "age": 63,
+  "sex": 1,
+  "cp": 5,
+  "trestbps": 145,
+  "chol": 233,
+  "fbs": 1,
+  "restecg": 0,
+  "thalach": 150,
+  "exang": 0,
+  "oldpeak": 2.3,
+  "slope": 0,
+  "ca": 0,
+  "thal": 1
+}
+EOF
+            ;;
+        5)
+            # Out of range value (chol > 600) - actual invalid case
+            cat <<EOF
+{
+  "age": 78,
+  "sex": 1,
+  "cp": 2,
+  "trestbps": 145,
+  "chol": 650,
+  "fbs": 1,
+  "restecg": 0,
+  "thalach": 150,
+  "exang": 0,
+  "oldpeak": 2.3,
+  "slope": 0,
+  "ca": 0,
+  "thal": 1
+}
+EOF
+            ;;
+        6)
+            # User-provided example case (high cholesterol, valid but edge case)
+            cat <<EOF
+{
+  "age": 78,
+  "ca": 0,
+  "chol": 550,
+  "cp": 2,
+  "exang": 0,
+  "fbs": 1,
+  "oldpeak": 2.3,
+  "restecg": 0,
+  "sex": 1,
+  "slope": 0,
+  "thal": 1,
+  "thalach": 150,
+  "trestbps": 145
+}
+EOF
+            ;;
+    esac
+}
+
+# Generate patient data (valid or invalid based on error rate)
+generate_patient_data() {
+    local should_error=$((RANDOM % 100))
+    
+    if [ $should_error -lt $ERROR_RATE ]; then
+        INVALID_COUNT=$((INVALID_COUNT + 1))
+        generate_invalid_patient_data
+    else
+        VALID_COUNT=$((VALID_COUNT + 1))
+        generate_valid_patient_data
+    fi
+}
+
 # Make prediction request
 make_prediction() {
     local patient_data="$1"
@@ -124,11 +316,15 @@ make_prediction() {
         if [ "$http_code" = "200" ]; then
             SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
             if [ "$LOG_RESPONSES" = "true" ]; then
-                echo "[$request_num] ✅ Success: $(echo "$body" | grep -o '"prediction_label":"[^"]*"' | cut -d'"' -f4)"
+                prediction=$(echo "$body" | grep -o '"prediction_label":"[^"]*"' | cut -d'"' -f4 || echo "N/A")
+                echo "[$request_num] ✅ Success: $prediction"
             fi
         else
             ERROR_COUNT=$((ERROR_COUNT + 1))
-            echo "[$request_num] ❌ Error (HTTP $http_code): $body"
+            if [ "$LOG_RESPONSES" = "true" ]; then
+                error_msg=$(echo "$body" | grep -o '"detail":"[^"]*"' | cut -d'"' -f4 || echo "$body" | head -c 100)
+                echo "[$request_num] ❌ Error (HTTP $http_code): $error_msg"
+            fi
         fi
     else
         # Silent mode - just check HTTP status
@@ -140,10 +336,10 @@ make_prediction() {
         
         if [ "$http_code" = "200" ]; then
             SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-            echo -ne "\r[$request_num/$MAX_REQUESTS] ✅ Success: $SUCCESS_COUNT | ❌ Errors: $ERROR_COUNT"
+            echo -ne "\r[$request_num/$MAX_REQUESTS] ✅ Valid: $VALID_COUNT | ❌ Invalid: $INVALID_COUNT | ✅ Success: $SUCCESS_COUNT | ❌ Errors: $ERROR_COUNT"
         else
             ERROR_COUNT=$((ERROR_COUNT + 1))
-            echo -ne "\r[$request_num/$MAX_REQUESTS] ✅ Success: $SUCCESS_COUNT | ❌ Errors: $ERROR_COUNT (HTTP $http_code)"
+            echo -ne "\r[$request_num/$MAX_REQUESTS] ✅ Valid: $VALID_COUNT | ❌ Invalid: $INVALID_COUNT | ✅ Success: $SUCCESS_COUNT | ❌ Errors: $ERROR_COUNT"
         fi
     fi
 }
@@ -157,6 +353,7 @@ main() {
     print_info "API URL: $API_URL"
     print_info "Max Requests: $MAX_REQUESTS"
     print_info "Interval: ${REQUEST_INTERVAL}s"
+    print_info "Error Rate: ${ERROR_RATE}% (invalid requests)"
     print_info "Log Responses: $LOG_RESPONSES"
     echo ""
     print_warning "Press Ctrl+C to stop early"
