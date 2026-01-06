@@ -649,7 +649,7 @@
       "pluginVersion": "10.0.0",
       "targets": [
         {
-          "expr": "up{job=\"heart-disease-api\"}",
+          "expr": "up{service=\"heart-disease-api\"}",
           "refId": "A"
         }
       ],

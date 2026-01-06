@@ -149,6 +149,9 @@ data:
             regex: (.+);(.+)
             target_label: __address__
             replacement: $1:$2
+          # Add custom service label for easier querying across jobs
+          - target_label: service
+            replacement: heart-disease-api
           # Add labels
           - action: labelmap
             regex: __meta_kubernetes_pod_label_(.+)
@@ -184,6 +187,9 @@ data:
             regex: (.+);(.+);(.+)
             replacement: $1.$2.svc.cluster.local:$3
             target_label: __address__
+          # Add custom service label for easier querying across jobs
+          - target_label: service
+            replacement: heart-disease-api
           # Add labels
           - action: labelmap
             regex: __meta_kubernetes_service_label_(.+)
