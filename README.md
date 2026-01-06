@@ -2,591 +2,1066 @@
 
 [![CI/CD Pipeline](https://github.com/2024aa05820/heart-disease-mlops/actions/workflows/ci.yml/badge.svg)](https://github.com/2024aa05820/heart-disease-mlops/actions/workflows/ci.yml)
 
-A production-ready machine learning solution for predicting heart disease risk, built with modern MLOps best practices.
+A production-ready machine learning solution for predicting heart disease risk, built with modern MLOps best practices including CI/CD pipelines, containerization, Kubernetes deployment, and comprehensive monitoring.
 
-## 🚀 Quick Start
+---
 
-### Complete ML Workflow (Train → Deploy)
+## 📋 Table of Contents
 
-**⚠️ IMPORTANT:** You must train models before deployment!
+1. [Project Overview](#-project-overview)
+2. [System Architecture](#-system-architecture)
+3. [Setup & Installation](#-setup--installation)
+4. [CI/CD Pipelines](#-cicd-pipelines)
+5. [Model Training & Experiment Tracking](#-model-training--experiment-tracking)
+6. [Deployment](#-deployment)
+7. [Monitoring & Observability](#-monitoring--observability)
+8. [API Documentation](#-api-documentation)
+9. [Testing](#-testing)
+10. [Project Structure](#-project-structure)
+
+---
+
+## 🎯 Project Overview
+
+### Problem Statement
+Predict heart disease risk in patients based on clinical features using machine learning models, deployed as a production-ready API with full MLOps infrastructure.
+
+### Key Features
+- **ML Models**: Logistic Regression & Random Forest classifiers
+- **Dataset**: UCI Heart Disease Dataset (303 samples, 14 features)
+- **Experiment Tracking**: MLflow for model versioning and metrics
+- **API**: FastAPI-based REST API with health checks and metrics
+- **Containerization**: Docker for consistent deployments
+- **Orchestration**: Kubernetes (Minikube) for scalable deployment
+- **CI/CD**: GitHub Actions + Jenkins for automated pipelines
+- **Monitoring**: Prometheus + Grafana for observability
+- **Infrastructure**: Automated setup scripts for Rocky Linux
+
+### Technology Stack
+
+| Component | Technology |
+|-----------|-----------|
+| **Language** | Python 3.11+ |
+| **ML Framework** | scikit-learn |
+| **API Framework** | FastAPI |
+| **Experiment Tracking** | MLflow |
+| **Containerization** | Docker |
+| **Orchestration** | Kubernetes (Minikube) |
+| **CI/CD** | GitHub Actions, Jenkins |
+| **Monitoring** | Prometheus, Grafana |
+| **Infrastructure** | Rocky Linux / RHEL / CentOS |
+
+---
+
+## 🏗️ System Architecture
+
+### High-Level Architecture
+
+```mermaid
+graph TB
+    subgraph "Development"
+        DEV[Developer] -->|Push Code| GIT[GitHub Repository]
+    end
+    
+    subgraph "CI/CD Pipeline"
+        GIT -->|Webhook| GA[GitHub Actions]
+        GIT -->|Webhook| JEN[Jenkins]
+        GA -->|Build Image| DOCKER[Docker Image]
+        JEN -->|Deploy| K8S[Kubernetes]
+    end
+    
+    subgraph "ML Pipeline"
+        DATA[Raw Data] -->|Preprocess| TRAIN[Model Training]
+        TRAIN -->|Log Metrics| MLFLOW[MLflow Tracking]
+        MLFLOW -->|Register Model| REGISTRY[Model Registry]
+        REGISTRY -->|Load Model| API[API Service]
+    end
+    
+    subgraph "Kubernetes Cluster"
+        K8S -->|Deploy| API
+        API -->|Expose Metrics| PROM[Prometheus]
+        PROM -->|Query| GRAF[Grafana]
+    end
+    
+    subgraph "Monitoring"
+        PROM -->|Scrape| API
+        GRAF -->|Visualize| DASH[Grafana Dashboards]
+    end
+    
+    USER[End User] -->|HTTP Requests| API
+    API -->|Predictions| USER
+```
+
+### Component Interaction Flow
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant GH as GitHub
+    participant GA as GitHub Actions
+    participant J as Jenkins
+    participant K8s as Kubernetes
+    participant API as API Service
+    participant Prom as Prometheus
+    participant Graf as Grafana
+    participant User as End User
+    
+    Dev->>GH: Push Code
+    GH->>GA: Trigger Workflow
+    GA->>GA: Lint & Test
+    GA->>GA: Train Models
+    GA->>GA: Build Docker Image
+    GA->>GA: Upload Artifact
+    
+    GH->>J: Webhook Trigger
+    J->>GA: Download Artifact
+    J->>K8s: Deploy to Cluster
+    K8s->>API: Start Pods
+    
+    User->>API: POST /predict
+    API->>API: Load Model
+    API->>User: Return Prediction
+    
+    API->>Prom: Expose /metrics
+    Prom->>Prom: Scrape Metrics
+    Prom->>Graf: Provide Data
+    Graf->>Graf: Render Dashboards
+```
+
+### Deployment Architecture
+
+```mermaid
+graph LR
+    subgraph "Kubernetes Namespace: default"
+        subgraph "Application Layer"
+            API1[API Pod 1]
+            API2[API Pod 2]
+            API_SVC[API Service]
+        end
+        
+        subgraph "Monitoring Stack"
+            PROM_POD[Prometheus Pod]
+            PROM_SVC[Prometheus Service]
+            GRAF_POD[Grafana Pod]
+            GRAF_SVC[Grafana Service]
+        end
+        
+        subgraph "Ingress"
+            ING[Ingress Controller]
+        end
+    end
+    
+    USER[Users] -->|HTTP| ING
+    ING -->|Route| API_SVC
+    API_SVC -->|Load Balance| API1
+    API_SVC -->|Load Balance| API2
+    
+    PROM_POD -->|Scrape| API1
+    PROM_POD -->|Scrape| API2
+    GRAF_POD -->|Query| PROM_SVC
+```
+
+---
+
+## 🚀 Setup & Installation
+
+### Prerequisites
+
+- **OS**: Rocky Linux 9+ / RHEL 9+ / CentOS 9+ (or any Linux with Docker)
+- **Python**: 3.11 or higher
+- **Docker**: For containerization
+- **Minikube**: For local Kubernetes (optional)
+- **kubectl**: Kubernetes CLI (optional)
+
+### Automated Setup (Rocky Linux)
+
+The project includes an automated setup script that installs all prerequisites:
 
 ```bash
 # Clone repository
 git clone https://github.com/2024aa05820/heart-disease-mlops.git
 cd heart-disease-mlops
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Option 1: Complete automated workflow (recommended)
-./scripts/complete-ml-workflow.sh
-
-# Option 2: Step-by-step
-./scripts/train-and-register.sh          # Train & register models (auto-tags best model)
-docker build -t heart-disease-api:latest .
-kubectl apply -f deploy/k8s/
-```
-
-**📖 Guides:**
-- **Model Training:** [docs/MLFLOW-FILESTORE-YAML-FIX.md](docs/MLFLOW-FILESTORE-YAML-FIX.md)
-- **Rocky Linux Setup:** [ROCKY_LINUX_QUICKSTART.md](ROCKY_LINUX_QUICKSTART.md)
-- **Deployment Options:** [DEPLOYMENT_OPTIONS_SUMMARY.md](DEPLOYMENT_OPTIONS_SUMMARY.md)
-
-### Rocky Linux (Recommended for Production)
-
-**Deploy in 10 minutes:**
-
-```bash
-# Clone and setup
-git clone https://github.com/2024aa05820/heart-disease-mlops.git
-cd heart-disease-mlops
-
-# Automated installation (Java, Docker, k8s, Jenkins)
+# Run automated setup (installs Java, Docker, kubectl, Minikube, Jenkins, Python)
 sudo ./scripts/rocky-setup.sh
 
-# Log out and back in, then:
-make rocky-start
-make deploy
-make urls
+# Log out and back in for group changes to take effect
+# Or run: newgrp docker
 ```
 
-**📖 Full Guide:** [ROCKY_LINUX_QUICKSTART.md](ROCKY_LINUX_QUICKSTART.md) | [ROCKY_LINUX_SETUP.md](ROCKY_LINUX_SETUP.md)
+**What the setup script installs:**
+- Java 17 (for Jenkins)
+- Docker & Docker Compose
+- kubectl (Kubernetes CLI)
+- Minikube (local Kubernetes)
+- Jenkins (CI/CD server)
+- Python 3.11+ and pip
+- Essential development tools
 
-### Other Deployment Options
+**Setup options:**
+```bash
+# Skip system update (faster)
+sudo ./scripts/rocky-setup.sh --skip-update
+
+# Force system update
+sudo ./scripts/rocky-setup.sh --update
+
+# Show help
+sudo ./scripts/rocky-setup.sh --help
+```
+
+### Manual Setup
+
+#### 1. Python Environment
 
 ```bash
-# SSH to your remote machine
-ssh username@your-remote-server-ip
-
-# Navigate to project
-cd ~/Documents/mlops-assignment-1/heart-disease-mlops
-git pull origin main
-
-# Deploy everything (builds, deploys, starts MLflow)
-./scripts/remote_quick_deploy.sh
-```
-
-**See:** [DEPLOYMENT_OPTIONS_SUMMARY.md](DEPLOYMENT_OPTIONS_SUMMARY.md) for all deployment methods.
-
-## 📋 Project Overview
-
-This project implements an end-to-end ML pipeline for heart disease classification:
-- **Dataset**: UCI Heart Disease Dataset (303 samples, 14 features)
-- **Models**: Logistic Regression & Random Forest classifiers
-- **Tracking**: MLflow for experiment tracking
-- **API**: FastAPI-based REST API
-- **Deployment**: Docker + Kubernetes
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         CI/CD Pipeline (GitHub Actions)                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │   Lint   │→ │   Test   │→ │  Train   │→ │  Docker  │→ │  Deploy  │  │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
-└─────────────────────────────────────────────────────────────────────────┘
-                                     ↓
-┌─────────────────────────────────────────────────────────────────────────┐
-│                            Kubernetes Cluster                            │
-│  ┌───────────────┐    ┌───────────────────────────────────────────┐    │
-│  │   Ingress/LB  │ →  │  Heart Disease API (FastAPI)              │    │
-│  └───────────────┘    │  - /health     Health check               │    │
-│                       │  - /predict    Make predictions           │    │
-│                       │  - /metrics    Prometheus metrics         │    │
-│                       └───────────────────────────────────────────┘    │
-│                                          ↓                              │
-│  ┌───────────────────────────────────────────────────────────────────┐ │
-│  │                    Monitoring (Prometheus + Grafana)              │ │
-│  └───────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-## 📁 Project Structure
-
-```
-heart-disease-mlops/
-├── .github/workflows/      # CI/CD pipeline
-│   └── ci.yml
-├── data/
-│   ├── raw/               # Raw dataset
-│   └── processed/         # Processed data
-├── deploy/
-│   └── k8s/               # Kubernetes manifests
-│       ├── deployment.yaml
-│       ├── service.yaml
-│       └── ingress.yaml
-├── models/                # Saved model artifacts
-├── mlruns/                # MLflow tracking
-├── notebooks/             # Jupyter notebooks
-│   └── 01_eda.ipynb
-├── reports/               # Documentation & screenshots
-│   └── screenshots/
-├── scripts/               # Utility scripts
-│   ├── download_data.py
-│   └── train.py
-├── src/
-│   ├── api/              # FastAPI application
-│   │   └── app.py
-│   ├── config/           # Configuration
-│   │   └── config.yaml
-│   ├── data/             # Data processing
-│   │   └── pipeline.py
-│   └── models/           # ML models
-│       ├── train.py
-│       └── predict.py
-├── tests/                 # Unit tests
-│   ├── test_api.py
-│   ├── test_data.py
-│   └── test_model.py
-├── Dockerfile
-├── Makefile
-├── requirements.txt
-└── README.md
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.11+
-- Docker
-- Minikube (for Kubernetes deployment)
-- MLflow (for experiment tracking)
-
-### 🎯 Five Deployment Options
-
-**Choose your deployment method:**
-
-1. **Rebuild on Remote** ⭐ RECOMMENDED - Simplest, 5 minutes
-2. **GitHub Artifact** - Use CI/CD built image
-3. **Docker Registry** - Production-ready with Docker Hub
-4. **Jenkins CI/CD** 🚀 - Full automation (build + deploy)
-5. **Hybrid (GitHub + Jenkins)** 🔥 NEW - Best of both worlds!
-
-**See:** [DEPLOYMENT_SOLUTION_SUMMARY.md](DEPLOYMENT_SOLUTION_SUMMARY.md) for detailed comparison.
-
-**Quick Deploy (Method 1):**
-```bash
-ssh user@remote
-cd ~/Documents/mlops-assignment-1/heart-disease-mlops
-git pull origin main
-./scripts/remote_quick_deploy.sh
-```
-
-### Initial Setup (Rocky Linux / RHEL / CentOS)
-
-#### Step 1: Check Python Version & Install Dependencies
-
-Run these commands on your Linux box:
-
-```bash
-# Check Python version (need 3.11+)
-python3 --version
-
-# If Python 3.11 is not installed, install it:
-sudo dnf install python3.11 python3.11-pip python3.11-devel -y
-
-# Install make if not present
-sudo dnf install make -y
-
-# Install git if not present (you likely have it since you cloned)
-sudo dnf install git -y
-```
-
-#### Step 2: Navigate to Project & Setup Virtual Environment
-
-```bash
-# Go to project directory
-cd ~/Documents/mlops-assignment-1/heart-disease-mlops
-
 # Create virtual environment
 python3 -m venv .venv
-
-# Activate virtual environment
 source .venv/bin/activate
 
-# Upgrade pip
-pip install --upgrade pip
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-**Or use the Makefile shortcut:**
-
-```bash
-make init
-source .venv/bin/activate
-```
-
-#### Alternative: Using Conda (Recommended for ML Projects)
-
-```bash
-# Create conda environment
-make init-conda
-
-# Activate conda environment
+# Or use conda (recommended for ML)
+conda create -n heart-mlops python=3.11
 conda activate heart-mlops
 
 # Install dependencies
-make install
+pip install -r requirements.txt
 ```
 
-### 1. Setup Environment (After Initial Setup)
+#### 2. Download Dataset
 
 ```bash
-# Clone repository (if not already done)
-git clone https://github.com/YOUR_USERNAME/heart-disease-mlops.git
-cd heart-disease-mlops
-
-# Create virtual environment
-make init
-
-# Activate virtual environment
-source .venv/bin/activate
-```
-
-### 2. Download Dataset
-
-```bash
-make download
-# or
+# Using script
 python scripts/download_data.py
+
+# Or using Makefile
+make download
 ```
 
-### 3. Train Models
+#### 3. Verify Installation
 
 ```bash
-make train
-# or
+# Check all services
+./scripts/check-all-services.sh
+
+# Or verify individually
+./scripts/verify-installation.sh
+```
+
+---
+
+## 🔄 CI/CD Pipelines
+
+### GitHub Actions Pipeline
+
+The project uses GitHub Actions for automated CI/CD with the following workflow:
+
+```mermaid
+graph LR
+    A[Push to GitHub] --> B[Lint Code]
+    B --> C[Run Tests]
+    C --> D[Train Models]
+    D --> E[Build Docker Image]
+    E --> F[Test Container]
+    F --> G[Upload Artifact]
+    G --> H[Deploy to K8s]
+    
+    style A fill:#e1f5ff
+    style B fill:#fff4e1
+    style C fill:#fff4e1
+    style D fill:#e8f5e9
+    style E fill:#e8f5e9
+    style F fill:#e8f5e9
+    style G fill:#f3e5f5
+    style H fill:#f3e5f5
+```
+
+**Workflow File**: `.github/workflows/ci.yml`
+
+**Pipeline Stages:**
+
+1. **Lint** - Code quality checks (ruff, black)
+2. **Test** - Unit tests with coverage
+3. **Train** - Model training and validation
+4. **Docker** - Build and test Docker image
+5. **Deploy** - Deploy to Kubernetes (on main branch)
+
+**View Pipeline Status:**
+- GitHub Repository → Actions tab
+- Badge in README shows current status
+
+**Manual Trigger:**
+```bash
+# Push to main or create PR
+git push origin main
+```
+
+### Jenkins Pipeline
+
+Jenkins provides full automation with GitHub webhooks for deployment.
+
+#### Jenkins Standard Pipeline
+
+**Pipeline File**: `Jenkinsfile`
+
+```mermaid
+graph TB
+    A[GitHub Webhook] --> B[Checkout Code]
+    B --> C[Setup Python]
+    C --> D[Lint & Test]
+    D --> E[Train Models]
+    E --> F[Build Docker Image]
+    F --> G[Deploy to Minikube]
+    G --> H[Verify Deployment]
+    
+    style A fill:#e1f5ff
+    style G fill:#f3e5f5
+    style H fill:#e8f5e9
+```
+
+**Setup Jenkins:**
+
+1. **Install Jenkins** (if not done by rocky-setup.sh):
+```bash
+sudo dnf install java-17-openjdk jenkins -y
+sudo systemctl start jenkins
+sudo systemctl enable jenkins
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+```
+
+2. **Configure Jenkins:**
+```bash
+# Add Jenkins user to docker group
+sudo usermod -aG docker jenkins
+sudo systemctl restart jenkins
+
+# Configure Jenkins to access Minikube
+./scripts/configure-jenkins-minikube.sh
+```
+
+3. **Create Pipeline Job:**
+   - New Item → Pipeline
+   - Repository: `https://github.com/2024aa05820/heart-disease-mlops.git`
+   - Script Path: `Jenkinsfile`
+   - Build Triggers: ✅ GitHub hook trigger
+
+4. **Add GitHub Webhook:**
+   - Repository Settings → Webhooks
+   - URL: `http://your-server-ip:8080/github-webhook/`
+   - Content type: `application/json`
+
+#### Jenkins Hybrid Pipeline
+
+**Pipeline File**: `Jenkinsfile.hybrid`
+
+Combines GitHub Actions (build) with Jenkins (deploy) for best of both worlds:
+
+```mermaid
+graph LR
+    A[Push Code] --> B[GitHub Actions]
+    B --> C[Build Docker Image]
+    C --> D[Upload Artifact]
+    D --> E[Jenkins Downloads]
+    E --> F[Deploy to K8s]
+    
+    style B fill:#e1f5ff
+    style E fill:#fff4e1
+    style F fill:#f3e5f5
+```
+
+**Benefits:**
+- ✅ Fast cloud builds (GitHub runners)
+- ✅ Controlled deployment (your server)
+- ✅ Free CI/CD minutes
+- ✅ Production-like pattern
+
+**Setup Hybrid Pipeline:**
+
+1. **Create GitHub Token:**
+   - GitHub Settings → Developer settings → Personal access tokens
+   - Generate token with `repo` and `actions:read` permissions
+
+2. **Add Token to Jenkins:**
+   - Jenkins → Manage Jenkins → Credentials
+   - Add Secret text with ID: `github-token`
+
+3. **Create Pipeline:**
+   - New Item → Pipeline
+   - Script Path: `Jenkinsfile.hybrid`
+   - Enable GitHub webhook
+
+4. **Deploy:**
+   - Push code → GitHub Actions builds → Jenkins auto-deploys
+
+**Access Jenkins:**
+```bash
+# Get initial password
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+# Access UI
+http://your-server-ip:8080
+```
+
+---
+
+## 🤖 Model Training & Experiment Tracking
+
+### Training Pipeline
+
+```mermaid
+graph TB
+    A[Raw Data] --> B[Data Preprocessing]
+    B --> C[Train/Test Split]
+    C --> D[Train Models]
+    D --> E[Evaluate Models]
+    E --> F[Select Best Model]
+    F --> G[Register in MLflow]
+    G --> H[Tag as Champion]
+    
+    style D fill:#e8f5e9
+    style F fill:#fff4e1
+    style G fill:#f3e5f5
+```
+
+### Training Models
+
+```bash
+# Activate environment
+source .venv/bin/activate  # or: conda activate heart-mlops
+
+# Train models (automated workflow)
+./scripts/train-and-register.sh
+
+# Or manual training
 python scripts/train.py
+
+# Or using Makefile
+make train
 ```
 
-### 4. Run API Locally
+**What happens during training:**
+1. Downloads dataset (if not present)
+2. Preprocesses data (scaling, encoding)
+3. Trains Logistic Regression and Random Forest
+4. Evaluates models (accuracy, precision, recall, F1, ROC-AUC)
+5. Logs metrics to MLflow
+6. Registers best model in MLflow Model Registry
+7. Tags best model as "champion"
+
+### MLflow Experiment Tracking
+
+**Start MLflow UI:**
 
 ```bash
+# Start MLflow server
+mlflow ui --backend-store-uri mlruns --host 0.0.0.0 --port 5000
+
+# Or using script
+./scripts/start_mlflow_ui.sh
+
+# Or using Makefile
+make mlflow-ui
+```
+
+**Access MLflow:**
+- Local: `http://localhost:5000`
+- Remote: `http://your-server-ip:5000`
+- SSH Tunnel: `ssh -L 5000:localhost:5000 user@server`
+
+**MLflow Features:**
+- **Experiments**: Organize runs by experiment
+- **Runs**: Track individual training runs
+- **Metrics**: Accuracy, Precision, Recall, F1, ROC-AUC
+- **Parameters**: Model hyperparameters
+- **Artifacts**: ROC curves, confusion matrices, feature importance
+- **Model Registry**: Version control for models
+
+**View Experiments:**
+```bash
+# Check MLflow status
+python scripts/check_mlflow_status.py
+
+# List experiments
+mlflow experiments list
+```
+
+---
+
+## 🚢 Deployment
+
+### Deployment Options
+
+```mermaid
+graph TB
+    A[Deployment Options] --> B[Local Development]
+    A --> C[Docker]
+    A --> D[Kubernetes]
+    A --> E[CI/CD Automated]
+    
+    B --> B1[uvicorn]
+    C --> C1[Docker Run]
+    C --> C2[Docker Compose]
+    D --> D1[Minikube]
+    D --> D2[Cloud K8s]
+    E --> E1[GitHub Actions]
+    E --> E2[Jenkins]
+    E --> E3[Hybrid]
+```
+
+### 1. Local Development
+
+```bash
+# Start API locally
 make serve
-# or
+# Or
 uvicorn src.api.app:app --host 0.0.0.0 --port 8000 --reload
-```
 
-### 5. Test API
-
-```bash
-# Health check
+# Test API
 curl http://localhost:8000/health
-
-# Make prediction
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "age": 63, "sex": 1, "cp": 3, "trestbps": 145,
-    "chol": 233, "fbs": 1, "restecg": 0, "thalach": 150,
-    "exang": 0, "oldpeak": 2.3, "slope": 0, "ca": 0, "thal": 1
-  }'
 ```
 
-## 🐳 Docker
-
-### Build & Run
+### 2. Docker Deployment
 
 ```bash
 # Build image
 make docker-build
+# Or
+docker build -t heart-disease-api:latest .
 
 # Run container
 make docker-run
+# Or
+docker run -d -p 8000:8000 --name heart-api heart-disease-api:latest
 
-# Or manually
-docker build -t heart-disease-api:latest .
-docker run -p 8000:8000 heart-disease-api:latest
+# Check logs
+docker logs -f heart-api
+
+# Stop container
+docker stop heart-api
+docker rm heart-api
 ```
 
-## ☸️ Kubernetes Deployment
+### 3. Kubernetes Deployment
 
-### Installing kubectl on Rocky Linux / RHEL / CentOS
-
-```bash
-# Install kubectl
-# Method 1: Using dnf/yum (if available in repos)
-sudo dnf install -y kubectl
-
-# Method 2: Manual installation (recommended)
-# Download kubectl
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-
-# Make it executable
-chmod +x kubectl
-
-# Move to PATH
-sudo mv kubectl /usr/local/bin/
-
-# Verify installation
-kubectl version --client
-```
-
-### Installing Minikube on Rocky Linux
-
-```bash
-# Download Minikube
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-
-# Install Minikube
-sudo install minikube-linux-amd64 /usr/local/bin/minikube
-
-# Verify installation
-minikube version
-
-# Install Docker (required for Minikube)
-sudo dnf install -y docker
-sudo systemctl start docker
-sudo systemctl enable docker
-sudo usermod -aG docker $USER
-
-# Log out and log back in for group changes to take effect
-# Or run: newgrp docker
-```
-
-### Using Minikube
+#### Start Minikube
 
 ```bash
 # Start Minikube
-minikube start
+minikube start --driver=docker --cpus=2 --memory=4096
 
-# Load Docker image into Minikube
-minikube image load heart-disease-api:latest
-
-# Deploy (use kubectl directly if installed)
-kubectl apply -f deploy/k8s/
-
-# If kubectl is not installed separately, use minikube kubectl with -- separator:
-# minikube kubectl -- apply -f deploy/k8s/
+# Or low memory mode
+./scripts/start-minikube-low-memory.sh
 
 # Check status
+minikube status
+kubectl cluster-info
+```
+
+#### Deploy Application
+
+```bash
+# Deploy all components
+kubectl apply -f deploy/k8s/
+
+# Or using Makefile
+make deploy
+
+# Check deployment status
 kubectl get pods
 kubectl get services
+kubectl get deployments
 
-# Access API (port-forward)
+# View logs
+kubectl logs -l app=heart-disease-api -f
+```
+
+#### Access Services
+
+```bash
+# Port-forward API
 kubectl port-forward service/heart-disease-api-service 8000:80
+
+# Port-forward Prometheus
+kubectl port-forward service/prometheus 9090:9090
+
+# Port-forward Grafana
+kubectl port-forward service/grafana 3000:3000
+
+# Access in browser
+# API: http://localhost:8000/docs
+# Prometheus: http://localhost:9090
+# Grafana: http://localhost:3000 (admin/admin)
 ```
 
-**Note:** If you don't have `kubectl` installed separately, you can use `minikube kubectl` with the `--` separator:
+#### Kubernetes Resources
+
+| Resource | File | Purpose |
+|----------|------|---------|
+| **Deployment** | `deploy/k8s/deployment.yaml` | API application pods |
+| **Service** | `deploy/k8s/service.yaml` | Service discovery & load balancing |
+| **Ingress** | `deploy/k8s/ingress.yaml` | External access routing |
+| **Monitoring** | `deploy/k8s/monitoring.yaml` | Prometheus & Grafana |
+| **Alerts** | `deploy/k8s/prometheus-alerts.yaml` | Alert rules |
+
+### 4. Automated Deployment Scripts
+
 ```bash
-minikube kubectl -- apply -f deploy/k8s/
-minikube kubectl -- get pods
-minikube kubectl -- get services
+# Complete workflow (train + deploy)
+./scripts/complete-ml-workflow.sh
+
+# Remote quick deploy
+./scripts/remote_quick_deploy.sh
+
+# Deploy to Minikube
+./scripts/deploy_to_minikube.sh
+
+# Deploy GitHub artifact
+./scripts/deploy_github_artifact.sh docker-image.tar.gz
 ```
 
-### Alternative: Using Docker Desktop Kubernetes (if available)
+---
 
-If you have Docker Desktop with Kubernetes enabled:
+## 📊 Monitoring & Observability
+
+### Monitoring Stack
+
+```mermaid
+graph TB
+    API[API Service] -->|Expose /metrics| PROM[Prometheus]
+    PROM -->|Scrape Metrics| API
+    PROM -->|Query| GRAF[Grafana]
+    GRAF -->|Visualize| DASH[Dashboards]
+    PROM -->|Evaluate| ALERT[Alert Rules]
+    ALERT -->|Trigger| NOTIFY[Notifications]
+```
+
+### Prometheus
+
+**Purpose**: Metrics collection and storage
+
+**Configuration**: `deploy/k8s/monitoring.yaml`
+
+**Features:**
+- Service discovery (Kubernetes pods & services)
+- Time-series database
+- PromQL query language
+- Alert rule evaluation
+
+**Access:**
+```bash
+# Port-forward
+kubectl port-forward service/prometheus 9090:9090
+
+# Access UI
+http://localhost:9090
+```
+
+**Key Metrics:**
+- `predictions_total` - Total predictions counter
+- `prediction_latency_seconds` - Prediction latency histogram
+- `request_count_total` - Request counter by method/endpoint/status
+- `up{service="heart-disease-api"}` - Service health status
+
+**Query Examples:**
+```promql
+# Total predictions
+sum(predictions_total)
+
+# Prediction rate
+sum(rate(predictions_total[5m]))
+
+# P95 latency
+histogram_quantile(0.95, sum(rate(prediction_latency_seconds_bucket[5m])) by (le))
+
+# Error rate
+sum(rate(request_count_total{status=~"5.."}[5m])) / sum(rate(request_count_total[5m])) * 100
+```
+
+### Grafana
+
+**Purpose**: Metrics visualization and dashboards
+
+**Configuration**: `grafana/comprehensive-dashboard.json`
+
+**Access:**
+```bash
+# Port-forward
+kubectl port-forward service/grafana 3000:3000
+
+# Access UI
+http://localhost:3000
+# Default credentials: admin/admin
+```
+
+**Dashboards:**
+1. **Comprehensive Monitoring Dashboard**
+   - Total Predictions
+   - Predictions/sec
+   - P95 Prediction Latency
+   - Error Rate %
+   - Prediction Rate Over Time
+   - Predictions Distribution (Pie Chart)
+   - Prediction Latency Percentiles
+   - Request Rate by Status Code
+   - Request Rate by Endpoint
+   - API Health Status
+   - Request Rate by HTTP Method
+   - Heart Disease Detection Rate
+
+2. **Basic API Dashboard**
+   - Core metrics overview
+
+**Import Dashboards:**
+```bash
+# Setup Grafana dashboards
+./scripts/setup-grafana-dashboards.sh
+
+# Or manually in Grafana UI:
+# Configuration → Data Sources → Add Prometheus
+# Dashboards → Import → Upload JSON file
+```
+
+**Configure Data Source:**
+```bash
+# Fix Grafana datasource
+./scripts/fix-grafana-datasource.sh
+```
+
+### Alert Rules
+
+**Configuration**: `deploy/k8s/prometheus-alerts.yaml`
+
+**Alerts:**
+- High Error Rate (Warning: >5%, Critical: >10%)
+- High Prediction Latency (Warning: P95 >1s, Critical: P95 >2s)
+- API Service Down
+
+**View Alerts:**
+```bash
+# Port-forward Prometheus
+kubectl port-forward service/prometheus 9090:9090
+
+# Visit: http://localhost:9090/alerts
+```
+
+### Generate Test Traffic
 
 ```bash
-# Enable Kubernetes in Docker Desktop settings
-# Then deploy directly:
-kubectl apply -f deploy/k8s/
+# Generate prediction traffic (500 requests, 10% errors)
+./scripts/generate-prediction-traffic.sh
+
+# Custom configuration
+MAX_REQUESTS=1000 ERROR_RATE=20 ./scripts/generate-prediction-traffic.sh
+
+# Simple version
+./scripts/generate-traffic-simple.sh http://localhost:8000 500 1
 ```
+
+**See**: `scripts/README-TRAFFIC-GENERATION.md` for detailed usage.
+
+---
+
+## 📡 API Documentation
+
+### Base URL
+- **Local**: `http://localhost:8000`
+- **Kubernetes**: `http://heart-disease-api-service:80` (cluster-internal)
+- **Port-forward**: `http://localhost:8000` (after port-forward)
+
+### Endpoints
+
+| Endpoint | Method | Description | Request Body |
+|----------|--------|-------------|--------------|
+| `/` | GET | API information | - |
+| `/health` | GET | Health check | - |
+| `/predict` | POST | Make prediction | Patient features (JSON) |
+| `/metrics` | GET | Prometheus metrics | - |
+| `/schema` | GET | Feature schema | - |
+| `/docs` | GET | Swagger UI | - |
+| `/redoc` | GET | ReDoc documentation | - |
+
+### Health Check
+
+```bash
+curl http://localhost:8000/health
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "model_loaded": true,
+  "timestamp": "2024-01-15T10:30:00"
+}
+```
+
+### Make Prediction
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "age": 63,
+    "sex": 1,
+    "cp": 3,
+    "trestbps": 145,
+    "chol": 233,
+    "fbs": 1,
+    "restecg": 0,
+    "thalach": 150,
+    "exang": 0,
+    "oldpeak": 2.3,
+    "slope": 0,
+    "ca": 0,
+    "thal": 1
+  }'
+```
+
+**Response:**
+```json
+{
+  "prediction": 1,
+  "prediction_label": "Heart Disease",
+  "probability_no_disease": 0.23,
+  "probability_disease": 0.77,
+  "confidence": 0.77,
+  "timestamp": "2024-01-15T10:30:00"
+}
+```
+
+### Feature Schema
+
+| Feature | Type | Range | Description |
+|---------|------|-------|-------------|
+| `age` | int | 0-120 | Age in years |
+| `sex` | int | 0-1 | Sex (1=male, 0=female) |
+| `cp` | int | 0-3 | Chest pain type |
+| `trestbps` | int | 50-250 | Resting blood pressure (mm Hg) |
+| `chol` | int | 100-600 | Serum cholesterol (mg/dl) |
+| `fbs` | int | 0-1 | Fasting blood sugar > 120 mg/dl |
+| `restecg` | int | 0-2 | Resting ECG results |
+| `thalach` | int | 50-250 | Maximum heart rate achieved |
+| `exang` | int | 0-1 | Exercise induced angina |
+| `oldpeak` | float | 0-10 | ST depression induced by exercise |
+| `slope` | int | 0-2 | Slope of peak exercise ST segment |
+| `ca` | int | 0-4 | Number of major vessels colored by fluoroscopy |
+| `thal` | int | 0-3 | Thalassemia |
+
+### Prometheus Metrics
+
+```bash
+curl http://localhost:8000/metrics
+```
+
+**Key Metrics:**
+- `predictions_total{result="disease"}` - Total disease predictions
+- `predictions_total{result="no_disease"}` - Total no-disease predictions
+- `prediction_latency_seconds_bucket` - Latency histogram buckets
+- `request_count_total{method, endpoint, status}` - Request counter
+
+---
 
 ## 🧪 Testing
+
+### Run Tests
 
 ```bash
 # Run all tests
 make test
+# Or
+pytest tests/ -v
 
 # Run with coverage
 pytest tests/ -v --cov=src --cov-report=html
 
 # Run specific test file
 pytest tests/test_api.py -v
+pytest tests/test_model.py -v
+pytest tests/test_data.py -v
 ```
 
-## 📊 MLflow Experiment Tracking
-
-### View Experiments
-
-After training models, view experiments in MLflow UI:
+### Test API
 
 ```bash
-# Start MLflow UI
-mlflow ui --backend-store-uri mlruns
+# Health check
+curl http://localhost:8000/health
 
-# Or use Makefile shortcut
-make mlflow-ui
+# Check API status
+./scripts/check-api-status.sh
 
-# Open browser: http://localhost:5000
-# Or if accessing remotely: http://0.0.0.0:5000
+# Generate test traffic
+./scripts/generate-prediction-traffic.sh
 ```
 
-### Troubleshooting Empty MLflow UI
-
-If MLflow UI shows an empty page, it means **no experiments have been logged yet**.
-
-**SOLUTION: Use the automated setup script:**
+### Linting & Formatting
 
 ```bash
-# One-command fix (downloads data + trains models + verifies)
-bash scripts/setup_mlflow.sh
+# Run linter
+make lint
+# Or
+ruff check src/ tests/ scripts/
 
-# Or manually:
-python scripts/download_data.py  # Step 1: Download dataset
-python scripts/train.py          # Step 2: Train models (creates MLflow runs)
-python scripts/check_mlflow_status.py  # Step 3: Verify everything worked
+# Format code
+make format
+# Or
+black src/ tests/ scripts/
+
+# Check formatting
+black --check src/ tests/ scripts/
 ```
 
-**Then start MLflow UI:**
+---
+
+## 📁 Project Structure
+
+```
+heart-disease-mlops/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # GitHub Actions CI/CD pipeline
+├── data/
+│   ├── raw/                        # Raw dataset
+│   └── processed/                  # Processed data
+├── deploy/
+│   └── k8s/                        # Kubernetes manifests
+│       ├── deployment.yaml        # API deployment
+│       ├── service.yaml            # Service definitions
+│       ├── ingress.yaml            # Ingress configuration
+│       ├── monitoring.yaml         # Prometheus & Grafana
+│       └── prometheus-alerts.yaml  # Alert rules
+├── grafana/
+│   ├── comprehensive-dashboard.json # Main dashboard
+│   ├── heart-disease-api-dashboard.json
+│   └── README.md
+├── models/                         # Saved model artifacts
+├── mlruns/                         # MLflow tracking data
+├── notebooks/
+│   └── 01_eda.ipynb                # Exploratory data analysis
+├── scripts/                        # Utility scripts
+│   ├── rocky-setup.sh              # Automated setup script
+│   ├── train-and-register.sh       # Training workflow
+│   ├── complete-ml-workflow.sh     # End-to-end workflow
+│   ├── generate-prediction-traffic.sh # Traffic generator
+│   ├── check-api-status.sh         # API status checker
+│   └── ...                         # Other utility scripts
+├── src/
+│   ├── api/
+│   │   └── app.py                  # FastAPI application
+│   ├── config/
+│   │   └── config.yaml             # Configuration file
+│   ├── data/
+│   │   └── pipeline.py             # Data preprocessing
+│   └── models/
+│       ├── train.py                # Model training
+│       └── predict.py              # Model prediction
+├── tests/                          # Unit tests
+│   ├── test_api.py
+│   ├── test_data.py
+│   └── test_model.py
+├── Dockerfile                      # Docker image definition
+├── Jenkinsfile                     # Jenkins pipeline
+├── Jenkinsfile.hybrid              # Hybrid Jenkins pipeline
+├── Makefile                        # Make commands
+├── requirements.txt                # Python dependencies
+└── README.md                       # This file
+```
+
+---
+
+## 🛠️ Quick Reference
+
+### Makefile Commands
+
 ```bash
-mlflow ui --host 0.0.0.0 --port 5000
+# Setup
+make init              # Create venv and install dependencies
+make init-conda        # Create conda environment
+make install           # Install dependencies
+
+# Data & Training
+make download          # Download dataset
+make train             # Train models
+
+# Development
+make serve             # Start API locally
+make test              # Run tests
+make lint              # Run linter
+make format            # Format code
+
+# Docker
+make docker-build      # Build Docker image
+make docker-run        # Run Docker container
+
+# Kubernetes
+make deploy            # Deploy to Kubernetes
+make k8s-status        # Check deployment status
+make k8s-logs          # View pod logs
+
+# MLflow
+make mlflow-ui         # Start MLflow UI
+
+# Rocky Linux
+make rocky-setup       # Install all prerequisites
+make rocky-start       # Start Minikube
 ```
 
-**Access from browser:**
-- Local: `http://localhost:5000`
-- Remote: `http://YOUR_SERVER_IP:5000`
-- SSH tunnel: `ssh -L 5000:localhost:5000 user@server` then `http://localhost:5000`
+### Common Scripts
 
-**Detailed troubleshooting guide:** See `MLFLOW_SETUP_GUIDE.md`
-
-### What You'll See After Training
-
-Once models are trained, MLflow UI will show:
-- **Experiments**: "heart-disease-classification"
-- **Runs**: One for each model (Logistic Regression, Random Forest)
-- **Metrics**: Accuracy, Precision, Recall, F1, ROC-AUC
-- **Parameters**: Model hyperparameters
-- **Artifacts**: ROC curves, confusion matrices, feature importance plots
-
-## 🤖 Jenkins CI/CD (Automated Deployment)
-
-### Overview
-
-Jenkins provides **fully automated deployment** with GitHub webhooks:
-- ✅ Push code to GitHub → Jenkins automatically builds and deploys
-- ✅ No manual intervention needed
-- ✅ Production-like CI/CD pipeline
-- ✅ Free and open-source
-
-### Quick Setup
-
-**1. Install Jenkins:**
 ```bash
-sudo dnf install java-17-openjdk jenkins -y
-sudo systemctl start jenkins
-sudo cat /var/lib/jenkins/secrets/initialAdminPassword
-# Access: http://remote-ip:8080
+# Setup & Installation
+./scripts/rocky-setup.sh                    # Automated setup
+./scripts/verify-installation.sh            # Verify installation
+
+# Training & MLflow
+./scripts/train-and-register.sh             # Train models
+./scripts/complete-ml-workflow.sh           # Full workflow
+./scripts/start_mlflow_ui.sh                # Start MLflow
+
+# Deployment
+./scripts/remote_quick_deploy.sh            # Quick deploy
+./scripts/deploy_to_minikube.sh             # Deploy to Minikube
+./scripts/deploy_github_artifact.sh        # Deploy artifact
+
+# Monitoring
+./scripts/setup-monitoring.sh               # Setup monitoring
+./scripts/setup-grafana-dashboards.sh      # Setup Grafana
+./scripts/fix-prometheus-targets.sh         # Fix Prometheus
+
+# Testing
+./scripts/generate-prediction-traffic.sh   # Generate traffic
+./scripts/check-api-status.sh              # Check API status
 ```
 
-**2. Configure:**
+---
+
+## 📚 Additional Resources
+
+### Documentation
+- **MLflow**: https://mlflow.org/docs/latest/
+- **FastAPI**: https://fastapi.tiangolo.com/
+- **Prometheus**: https://prometheus.io/docs/
+- **Grafana**: https://grafana.com/docs/
+- **Kubernetes**: https://kubernetes.io/docs/
+
+### Troubleshooting
+
 ```bash
-sudo usermod -aG docker jenkins
-sudo systemctl restart jenkins
+# Check all services
+./scripts/check-all-services.sh
+
+# Diagnose monitoring issues
+./scripts/diagnose-monitoring.sh
+
+# Troubleshoot Grafana
+./scripts/troubleshoot-grafana-metrics.sh
+
+# Fix Prometheus scraping
+./scripts/fix-prometheus-targets.sh
+
+# Check API status
+./scripts/check-api-status.sh
 ```
 
-**3. Create Pipeline Job:**
-- Repository: `https://github.com/2024aa05820/heart-disease-mlops.git`
-- Script Path: `Jenkinsfile`
-- Build Triggers: ✅ GitHub hook trigger
-
-**4. Add GitHub Webhook:**
-- URL: `http://remote-ip:8080/github-webhook/`
-
-**5. Push code → Jenkins auto-deploys! 🚀**
-
-**See:** [JENKINS_SETUP_GUIDE.md](JENKINS_SETUP_GUIDE.md) for complete instructions.
-
-### 🔥 Hybrid: GitHub Actions + Jenkins
-
-**Best of both worlds - GitHub builds, Jenkins deploys!**
-
-**How it works:**
-1. Push code → GitHub Actions builds Docker image
-2. Jenkins downloads artifact from GitHub
-3. Jenkins deploys to Minikube
-
-**Benefits:**
-- ✅ Fast cloud builds (GitHub runners)
-- ✅ Controlled deployment (your server)
-- ✅ Free (GitHub's CI/CD minutes)
-- ✅ Production-like pattern
-
-**Quick Setup:**
-```bash
-# Install jq
-sudo dnf install jq -y
-
-# Add GitHub token to Jenkins (ID: github-token)
-# Create pipeline with Script Path: Jenkinsfile.hybrid
-# Push code → Auto-deploy! 🚀
-```
-
-**See:** [JENKINS_HYBRID_DEPLOYMENT.md](JENKINS_HYBRID_DEPLOYMENT.md) for complete guide.
-
-## 📈 API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | API information |
-| `/health` | GET | Health check |
-| `/predict` | POST | Make prediction |
-| `/metrics` | GET | Prometheus metrics |
-| `/schema` | GET | Feature schema |
-| `/docs` | GET | Swagger documentation |
-
-## 🔧 Configuration
-
-Edit `src/config/config.yaml` to customize:
-- Data paths
-- Model hyperparameters
-- MLflow settings
-- API configuration
-
-## 📋 Feature Description
-
-| Feature | Description | Type | Range |
-|---------|-------------|------|-------|
-| age | Age in years | int | 0-120 |
-| sex | Sex (1=male, 0=female) | int | 0-1 |
-| cp | Chest pain type | int | 0-3 |
-| trestbps | Resting blood pressure (mm Hg) | int | 50-250 |
-| chol | Serum cholesterol (mg/dl) | int | 100-600 |
-| fbs | Fasting blood sugar > 120 mg/dl | int | 0-1 |
-| restecg | Resting ECG results | int | 0-2 |
-| thalach | Maximum heart rate achieved | int | 50-250 |
-| exang | Exercise induced angina | int | 0-1 |
-| oldpeak | ST depression | float | 0-10 |
-| slope | Slope of peak ST segment | int | 0-2 |
-| ca | Major vessels colored by fluoroscopy | int | 0-4 |
-| thal | Thalassemia | int | 0-3 |
-
-## 📚 Deployment Documentation
-
-### Quick Reference Guides
-
-| Document | Purpose | Use When |
-|----------|---------|----------|
-| **[README.md](README.md)** | Main project documentation | Overview and getting started |
-| **[DEPLOYMENT_SOLUTION_SUMMARY.md](DEPLOYMENT_SOLUTION_SUMMARY.md)** | Overview of all 5 deployment methods | Start here - choose your method |
-| **[GITHUB_TO_REMOTE_DEPLOYMENT.md](GITHUB_TO_REMOTE_DEPLOYMENT.md)** | GitHub artifact deployment | Using CI/CD built images |
-| **[JENKINS_SETUP_GUIDE.md](JENKINS_SETUP_GUIDE.md)** | Jenkins CI/CD setup | Full automation with Jenkins |
-| **[JENKINS_HYBRID_DEPLOYMENT.md](JENKINS_HYBRID_DEPLOYMENT.md)** | Hybrid GitHub + Jenkins | Best of both worlds! |
-| **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** | Quick command reference | Fast lookup of commands |
-
-### Available Scripts
-
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| `scripts/remote_quick_deploy.sh` | Full automated deployment | `./scripts/remote_quick_deploy.sh` |
-| `scripts/deploy_to_minikube.sh` | Deploy to Kubernetes | `./scripts/deploy_to_minikube.sh` |
-| `scripts/deploy_github_artifact.sh` | Deploy GitHub artifact | `./scripts/deploy_github_artifact.sh ~/docker-image.tar.gz` |
-| `scripts/download_github_artifact.sh` | Download GitHub artifact | `./scripts/download_github_artifact.sh` |
-| `scripts/jenkins_deploy.sh` | Jenkins deployment helper | `./scripts/jenkins_deploy.sh latest` |
-| `scripts/start_mlflow_ui.sh` | Manage MLflow UI | `./scripts/start_mlflow_ui.sh --background` |
-
-### Deployment Methods Comparison
-
-| Method | Time | Complexity | Best For |
-|--------|------|------------|----------|
-| **Rebuild on Remote** | 5 min | ⭐ Easy | Assignments, quick testing |
-| **GitHub Artifact** | 10 min | ⭐⭐ Medium | Learning CI/CD, reproducibility |
-| **Docker Registry** | 15 min | ⭐⭐⭐ Advanced | Production, multiple targets |
+---
 
 ## 📄 License
 
@@ -594,7 +1069,27 @@ This project is for educational purposes (BITS Pilani MLOps Assignment).
 
 ## 👤 Author
 
-- **Name**: [Your Name]
 - **Course**: MLOps (S1-25_AIMLCZG523)
 - **Institution**: BITS Pilani
+- **Repository**: https://github.com/2024aa05820/heart-disease-mlops
 
+---
+
+## 🎓 Assignment Deliverables Summary
+
+### ✅ Completed Deliverables
+
+1. **Data Pipeline** - Automated data preprocessing and feature engineering
+2. **Model Training** - Multiple models with hyperparameter tuning
+3. **Experiment Tracking** - MLflow integration with model registry
+4. **API Development** - FastAPI REST API with health checks
+5. **Containerization** - Docker image with multi-stage builds
+6. **Orchestration** - Kubernetes deployment with HPA
+7. **CI/CD Pipeline** - GitHub Actions + Jenkins automation
+8. **Monitoring** - Prometheus metrics + Grafana dashboards
+9. **Infrastructure** - Automated setup scripts for Rocky Linux
+10. **Documentation** - Comprehensive README with diagrams
+
+---
+
+**🚀 Ready to deploy? Start with the [Setup & Installation](#-setup--installation) section!**
