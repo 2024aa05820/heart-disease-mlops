@@ -107,6 +107,45 @@ pipeline {
                 '''
             }
         }
+
+        stage('Promote Best Model') {
+            steps {
+                echo '🏆 Promoting best model to Production...'
+                sh '''
+                    . venv/bin/activate
+
+                    echo "========================================="
+                    echo "📊 MLflow Model Registry - Before Promotion"
+                    echo "========================================="
+                    echo ""
+
+                    # List all registered models
+                    python scripts/promote-model.py --list || {
+                        echo "⚠️  Could not list models (might be first run)"
+                    }
+                    echo ""
+
+                    echo "========================================="
+                    echo "🏆 Auto-Promoting Best Model"
+                    echo "========================================="
+                    echo ""
+
+                    # Automatically find and promote the best model
+                    python scripts/promote-model.py --auto || {
+                        echo "⚠️  Auto-promotion failed, but continuing pipeline..."
+                        echo "   You can manually promote later using:"
+                        echo "   python scripts/promote-model.py <model-name>"
+                    }
+
+                    echo ""
+                    echo "========================================="
+                    echo "📊 MLflow Model Registry - After Promotion"
+                    echo "========================================="
+                    python scripts/promote-model.py --list || true
+                    echo ""
+                '''
+            }
+        }
         
         stage('Build Docker Image') {
             steps {
@@ -420,6 +459,12 @@ pipeline {
                         kubectl get service heart-disease-api-service
                         echo ""
                         echo "========================================="
+                        echo "🤖 MLflow Model Registry"
+                        echo "========================================="
+                        . venv/bin/activate
+                        python scripts/promote-model.py --list || echo "⚠️  Could not retrieve model info"
+                        echo ""
+                        echo "========================================="
                         echo "📊 Access URLs"
                         echo "========================================="
                         SERVER_IP=$(hostname -I | awk '{print $1}')
@@ -438,6 +483,10 @@ pipeline {
                         echo "3️⃣  Prometheus Metrics:"
                         echo "   kubectl port-forward service/heart-disease-api-service 8000:80"
                         echo "   Then visit: http://localhost:8000/metrics"
+                        echo ""
+                        echo "4️⃣  Manually promote a model (if needed):"
+                        echo "   python scripts/promote-model.py <model-name>"
+                        echo "   python scripts/promote-model.py --auto"
                         echo "========================================="
                     '''
                 }

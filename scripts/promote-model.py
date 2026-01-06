@@ -155,24 +155,79 @@ def list_models():
                     print(f"      Tag: {key} = {value}")
 
 
+def find_and_promote_best():
+    """Find the model tagged as best and promote it."""
+    mlflow.set_tracking_uri("mlruns")
+    client = MlflowClient()
+
+    print("🔍 Searching for best model...")
+
+    try:
+        # Get all registered models
+        models = client.search_registered_models()
+
+        if not models:
+            print("❌ No models found in registry")
+            return False
+
+        # Look for model with best_model=true tag
+        best_model = None
+        best_version = None
+        best_roc_auc = 0.0
+
+        for model in models:
+            # Get all versions
+            versions = client.search_model_versions(f"name='{model.name}'")
+
+            for v in versions:
+                # Check if this version has best_model tag
+                if v.tags and v.tags.get('best_model') == 'true':
+                    roc_auc = float(v.tags.get('roc_auc', 0.0))
+                    if roc_auc > best_roc_auc:
+                        best_model = model.name
+                        best_version = v.version
+                        best_roc_auc = roc_auc
+
+        if best_model:
+            print(f"✅ Found best model: {best_model} v{best_version} (ROC-AUC: {best_roc_auc:.4f})")
+            return promote_model(best_model, best_version)
+        else:
+            print("⚠️  No model found with 'best_model=true' tag")
+            print("   Promoting latest version of first model...")
+            # Fallback: promote latest version of first model
+            first_model = models[0].name
+            return promote_model(first_model)
+
+    except Exception as e:
+        print(f"❌ Error finding best model: {e}")
+        return False
+
+
 def main():
     """Main entry point."""
     if len(sys.argv) < 2:
         print("Usage: python scripts/promote-model.py <model_name> [version]")
         print("\nOr use --list to see all models:")
         print("       python scripts/promote-model.py --list")
+        print("\nOr use --auto to automatically find and promote best model:")
+        print("       python scripts/promote-model.py --auto")
         print("\nExamples:")
         print("  python scripts/promote-model.py heart-disease-logistic_regression")
         print("  python scripts/promote-model.py heart-disease-random_forest 2")
+        print("  python scripts/promote-model.py --auto")
         sys.exit(1)
-    
+
     if sys.argv[1] == "--list":
         list_models()
         sys.exit(0)
-    
+
+    if sys.argv[1] == "--auto":
+        success = find_and_promote_best()
+        sys.exit(0 if success else 1)
+
     model_name = sys.argv[1]
     version = sys.argv[2] if len(sys.argv) > 2 else None
-    
+
     success = promote_model(model_name, version)
     sys.exit(0 if success else 1)
 
