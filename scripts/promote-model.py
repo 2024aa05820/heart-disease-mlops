@@ -7,35 +7,33 @@ transition model stages programmatically in some MLflow versions.
 
 Usage:
     python scripts/promote-model.py <model_name> [version]
-    
+
 Examples:
     # Promote latest version of logistic_regression to Production
     python scripts/promote-model.py heart-disease-logistic_regression
-    
+
     # Promote specific version to Production
     python scripts/promote-model.py heart-disease-logistic_regression 2
 """
 
 import sys
-import os
 from pathlib import Path
+
+import mlflow
+from mlflow.tracking import MlflowClient
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-import mlflow
-from mlflow.tracking import MlflowClient
 
-
-def promote_model(model_name: str, version: str = None, retry_with_rest_api: bool = True):
+def promote_model(model_name: str, version: str = None):
     """
     Promote a model version to Production stage.
 
     Args:
         model_name: Name of the registered model
         version: Version number (optional, defaults to latest)
-        retry_with_rest_api: If True, retry with REST API on failure
     """
     # Set tracking URI
     mlflow.set_tracking_uri("mlruns")
@@ -50,7 +48,7 @@ def promote_model(model_name: str, version: str = None, retry_with_rest_api: boo
 
         if not all_versions:
             print(f"❌ No versions found for model '{model_name}'")
-            print(f"\nAvailable models:")
+            print("\nAvailable models:")
             for rm in client.search_registered_models():
                 print(f"  - {rm.name}")
             return False
@@ -64,7 +62,7 @@ def promote_model(model_name: str, version: str = None, retry_with_rest_api: boo
             version_obj = next((v for v in all_versions if v.version == version), None)
             if not version_obj:
                 print(f"❌ Version {version} not found for model '{model_name}'")
-                print(f"\nAvailable versions:")
+                print("\nAvailable versions:")
                 for v in all_versions:
                     print(f"  - Version {v.version} (Stage: {v.current_stage})")
                 return False
@@ -81,7 +79,7 @@ def promote_model(model_name: str, version: str = None, retry_with_rest_api: boo
             return True
 
         # Archive existing Production versions
-        print(f"\n📦 Checking for existing Production versions...")
+        print("\n📦 Checking for existing Production versions...")
         production_versions = client.get_latest_versions(model_name, stages=["Production"])
 
         for pv in production_versions:
@@ -116,7 +114,7 @@ def promote_model(model_name: str, version: str = None, retry_with_rest_api: boo
 
             # Method 2: Try with archive_existing_versions=False
             if "Representation" in error_name or "cannot represent" in str(e):
-                print(f"🔄 Trying alternative method...")
+                print("🔄 Trying alternative method...")
                 try:
                     client.transition_model_version_stage(
                         name=model_name,
@@ -129,35 +127,16 @@ def promote_model(model_name: str, version: str = None, retry_with_rest_api: boo
                 except Exception as e2:
                     print(f"⚠️  Method 2 also failed: {type(e2).__name__}")
 
-            # Method 3: Try direct file manipulation (last resort)
-            print(f"🔄 Trying direct metadata update...")
-            try:
-                import os
-                import yaml
-
-                # Find the model version metadata file
-                meta_file = f"mlruns/.trash/{model_name}/{target_version}/meta.yaml"
-                if not os.path.exists(meta_file):
-                    meta_file = f"mlruns/models/{model_name}/{target_version}/meta.yaml"
-
-                if os.path.exists(meta_file):
-                    # This is a workaround - not recommended for production
-                    print(f"   ⚠️  Direct file manipulation not implemented (too risky)")
-                    print(f"   Please use MLflow UI for manual promotion")
-
-            except Exception:
-                pass
-
             # All methods failed
-            print(f"\n❌ All promotion methods failed")
+            print("\n❌ All promotion methods failed")
             print(f"   Original error: {str(e)[:200]}")
-            print(f"\n💡 Manual promotion required:")
-            print(f"   1. Open MLflow UI: http://localhost:5001")
-            print(f"   2. Go to Models tab")
+            print("\n💡 Manual promotion required:")
+            print("   1. Open MLflow UI: http://localhost:5000")
+            print("   2. Go to Models tab")
             print(f"   3. Click '{model_name}'")
             print(f"   4. Click 'Version {target_version}'")
-            print(f"   5. Change Stage dropdown to 'Production'")
-            print(f"   6. Click 'Save'")
+            print("   5. Change Stage dropdown to 'Production'")
+            print("   6. Click 'Save'")
             return False
 
     except Exception as e:
@@ -223,9 +202,9 @@ def cleanup_old_versions(model_name: str = None, keep_last: int = 3):
                     except Exception as e:
                         print(f"      ❌ Failed to delete Version {v.version}: {e}")
             else:
-                print(f"   ℹ️  No old versions to delete")
+                print("   ℹ️  No old versions to delete")
 
-        print(f"\n✅ Cleanup completed!")
+        print("\n✅ Cleanup completed!")
         return True
 
     except Exception as e:
