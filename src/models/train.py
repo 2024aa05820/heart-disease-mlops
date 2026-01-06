@@ -274,7 +274,7 @@ def train_and_log_model(
             model_name,
             signature=signature,
             input_example=input_example,
-            registered_model_name=f"heart-disease-{model_name}"
+            registered_model_name=f"heart-disease-{model_name}",
         )
 
         # Print classification report
@@ -383,7 +383,9 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
             latest_version_obj = all_versions[0]
             latest_version = latest_version_obj.version
 
-            print(f"   Found version {latest_version}, current stage: {latest_version_obj.current_stage}")
+            print(
+                f"   Found version {latest_version}, current stage: {latest_version_obj.current_stage}"
+            )
 
             # Tag the model as the best model (ALL TAGS MUST BE STRINGS for FileStore YAML)
             try:
@@ -392,19 +394,19 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
                     name=registered_model_name,
                     version=str(latest_version),  # Ensure version is string
                     key="best_model",
-                    value="true"  # String, not boolean
+                    value="true",  # String, not boolean
                 )
                 client.set_model_version_tag(
                     name=registered_model_name,
                     version=str(latest_version),
                     key="roc_auc",
-                    value=str(best_metrics['roc_auc'])  # String, not float
+                    value=str(best_metrics["roc_auc"]),  # String, not float
                 )
                 client.set_model_version_tag(
                     name=registered_model_name,
                     version=str(latest_version),
                     key="model_type",
-                    value=str(best_model_name)  # String
+                    value=str(best_model_name),  # String
                 )
                 print(f"   ✅ Tagged version {latest_version} as best model")
             except Exception as tag_error:
@@ -417,9 +419,11 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
                 client.set_registered_model_alias(
                     name=registered_model_name,
                     alias="champion",
-                    version=str(latest_version)
+                    version=str(latest_version),
                 )
-                print(f"   ✅ Model {registered_model_name} v{latest_version} aliased as 'champion'")
+                print(
+                    f"   ✅ Model {registered_model_name} v{latest_version} aliased as 'champion'"
+                )
                 print(f"   ℹ️  Load with: models:/{registered_model_name}@champion")
             except Exception as alias_error:
                 print(f"   ⚠️  Could not set alias: {alias_error}")

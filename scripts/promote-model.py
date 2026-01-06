@@ -80,7 +80,9 @@ def promote_model(model_name: str, version: str = None):
 
         # Archive existing Production versions
         print("\n📦 Checking for existing Production versions...")
-        production_versions = client.get_latest_versions(model_name, stages=["Production"])
+        production_versions = client.get_latest_versions(
+            model_name, stages=["Production"]
+        )
 
         for pv in production_versions:
             print(f"   Archiving version {pv.version}...")
@@ -89,7 +91,7 @@ def promote_model(model_name: str, version: str = None):
                     name=model_name,
                     version=pv.version,
                     stage="Archived",
-                    archive_existing_versions=False
+                    archive_existing_versions=False,
                 )
                 print(f"   ✅ Version {pv.version} archived")
             except Exception as e:
@@ -103,9 +105,11 @@ def promote_model(model_name: str, version: str = None):
                 name=model_name,
                 version=target_version,
                 stage="Production",
-                archive_existing_versions=True
+                archive_existing_versions=True,
             )
-            print(f"✅ Successfully promoted {model_name} v{target_version} to Production!")
+            print(
+                f"✅ Successfully promoted {model_name} v{target_version} to Production!"
+            )
             return True
 
         except Exception as e:
@@ -120,9 +124,11 @@ def promote_model(model_name: str, version: str = None):
                         name=model_name,
                         version=target_version,
                         stage="Production",
-                        archive_existing_versions=False
+                        archive_existing_versions=False,
                     )
-                    print(f"✅ Successfully promoted {model_name} v{target_version} to Production!")
+                    print(
+                        f"✅ Successfully promoted {model_name} v{target_version} to Production!"
+                    )
                     return True
                 except Exception as e2:
                     print(f"⚠️  Method 2 also failed: {type(e2).__name__}")
@@ -162,7 +168,9 @@ def cleanup_old_versions(model_name: str = None, keep_last: int = 3):
     try:
         # Get models to clean
         if model_name:
-            models = [rm for rm in client.search_registered_models() if rm.name == model_name]
+            models = [
+                rm for rm in client.search_registered_models() if rm.name == model_name
+            ]
             if not models:
                 print(f"❌ Model '{model_name}' not found")
                 return False
@@ -194,10 +202,7 @@ def cleanup_old_versions(model_name: str = None, keep_last: int = 3):
                 print(f"   🗑️  Deleting {len(versions_to_delete)} old versions...")
                 for v in versions_to_delete:
                     try:
-                        client.delete_model_version(
-                            name=model.name,
-                            version=v.version
-                        )
+                        client.delete_model_version(name=model.name, version=v.version)
                         print(f"      ✅ Deleted Version {v.version}")
                     except Exception as e:
                         print(f"      ❌ Failed to delete Version {v.version}: {e}")
@@ -269,15 +274,17 @@ def find_and_promote_best():
 
             for v in versions:
                 # Check if this version has best_model tag
-                if v.tags and v.tags.get('best_model') == 'true':
-                    roc_auc = float(v.tags.get('roc_auc', 0.0))
+                if v.tags and v.tags.get("best_model") == "true":
+                    roc_auc = float(v.tags.get("roc_auc", 0.0))
                     if roc_auc > best_roc_auc:
                         best_model = model.name
                         best_version = v.version
                         best_roc_auc = roc_auc
 
         if best_model:
-            print(f"✅ Found best model: {best_model} v{best_version} (ROC-AUC: {best_roc_auc:.4f})")
+            print(
+                f"✅ Found best model: {best_model} v{best_version} (ROC-AUC: {best_roc_auc:.4f})"
+            )
             return promote_model(best_model, best_version)
         else:
             print("⚠️  No model found with 'best_model=true' tag")
@@ -300,13 +307,17 @@ def main():
         print("\nOr use --auto to automatically find and promote best model:")
         print("       python scripts/promote-model.py --auto")
         print("\nOr use --cleanup to delete old model versions (keeps last 3):")
-        print("       python scripts/promote-model.py --cleanup [model_name] [keep_count]")
+        print(
+            "       python scripts/promote-model.py --cleanup [model_name] [keep_count]"
+        )
         print("\nExamples:")
         print("  python scripts/promote-model.py heart-disease-logistic_regression")
         print("  python scripts/promote-model.py heart-disease-random_forest 2")
         print("  python scripts/promote-model.py --auto")
         print("  python scripts/promote-model.py --cleanup")
-        print("  python scripts/promote-model.py --cleanup heart-disease-logistic_regression 5")
+        print(
+            "  python scripts/promote-model.py --cleanup heart-disease-logistic_regression 5"
+        )
         sys.exit(1)
 
     if sys.argv[1] == "--list":
@@ -323,11 +334,15 @@ def main():
 
         # Confirm before cleanup
         if model_name:
-            confirm = input(f"⚠️  Delete old versions of '{model_name}' (keeping last {keep_last})? [y/N]: ")
+            confirm = input(
+                f"⚠️  Delete old versions of '{model_name}' (keeping last {keep_last})? [y/N]: "
+            )
         else:
-            confirm = input(f"⚠️  Delete old versions of ALL models (keeping last {keep_last})? [y/N]: ")
+            confirm = input(
+                f"⚠️  Delete old versions of ALL models (keeping last {keep_last})? [y/N]: "
+            )
 
-        if confirm.lower() == 'y':
+        if confirm.lower() == "y":
             success = cleanup_old_versions(model_name, keep_last)
             sys.exit(0 if success else 1)
         else:
@@ -343,4 +358,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
