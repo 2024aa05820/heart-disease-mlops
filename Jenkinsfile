@@ -111,39 +111,52 @@ pipeline {
         stage('Promote Best Model') {
             steps {
                 echo '🏆 Promoting best model to Production...'
-                sh '''
-                    . venv/bin/activate
+                script {
+                    try {
+                        sh '''
+                            . venv/bin/activate
 
-                    echo "========================================="
-                    echo "📊 MLflow Model Registry - Before Promotion"
-                    echo "========================================="
-                    echo ""
+                            echo "========================================="
+                            echo "📊 MLflow Model Registry - Before Promotion"
+                            echo "========================================="
+                            echo ""
 
-                    # List all registered models
-                    python scripts/promote-model.py --list || {
-                        echo "⚠️  Could not list models (might be first run)"
+                            # List all registered models (ignore errors)
+                            python scripts/promote-model.py --list 2>&1 || {
+                                echo "⚠️  Could not list models (might be first run)"
+                            }
+                            echo ""
+
+                            echo "========================================="
+                            echo "🏆 Auto-Promoting Best Model"
+                            echo "========================================="
+                            echo ""
+
+                            # Automatically find and promote the best model (ignore errors)
+                            python scripts/promote-model.py --auto 2>&1 || {
+                                echo "⚠️  Auto-promotion failed, but continuing pipeline..."
+                                echo "   This is a known issue with MLflow FileStore backend."
+                                echo "   You can manually promote later using:"
+                                echo "   python scripts/promote-model.py <model-name>"
+                                echo "   Or via MLflow UI: http://<server-ip>:5001"
+                            }
+
+                            echo ""
+                            echo "========================================="
+                            echo "📊 MLflow Model Registry - After Promotion"
+                            echo "========================================="
+                            python scripts/promote-model.py --list 2>&1 || true
+                            echo ""
+                        '''
+                    } catch (Exception e) {
+                        echo "⚠️  Model promotion stage encountered an error, but continuing pipeline..."
+                        echo "Error: ${e.message}"
+                        echo ""
+                        echo "💡 This is a known issue with MLflow FileStore backend (RepresenterError)."
+                        echo "   The model is still registered and can be promoted manually via MLflow UI."
+                        echo "   Pipeline will continue to deployment stage."
                     }
-                    echo ""
-
-                    echo "========================================="
-                    echo "🏆 Auto-Promoting Best Model"
-                    echo "========================================="
-                    echo ""
-
-                    # Automatically find and promote the best model
-                    python scripts/promote-model.py --auto || {
-                        echo "⚠️  Auto-promotion failed, but continuing pipeline..."
-                        echo "   You can manually promote later using:"
-                        echo "   python scripts/promote-model.py <model-name>"
-                    }
-
-                    echo ""
-                    echo "========================================="
-                    echo "📊 MLflow Model Registry - After Promotion"
-                    echo "========================================="
-                    python scripts/promote-model.py --list || true
-                    echo ""
-                '''
+                }
             }
         }
         
@@ -444,51 +457,63 @@ pipeline {
         success {
             echo '✅ Pipeline completed successfully!'
             script {
-                withCredentials([file(credentialsId: 'kubeconfig-minikube', variable: 'KUBECONFIG')]) {
-                    sh '''
-                        echo "========================================="
-                        echo "🎉 Deployment Summary"
-                        echo "========================================="
-                        echo "📦 Build Number: ${BUILD_NUMBER}"
-                        echo "🐳 Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
-                        echo ""
-                        echo "☸️  Kubernetes Pods:"
-                        kubectl get pods -l app=heart-disease-api
-                        echo ""
-                        echo "🌐 Service Info:"
-                        kubectl get service heart-disease-api-service
-                        echo ""
-                        echo "========================================="
-                        echo "🤖 MLflow Model Registry"
-                        echo "========================================="
-                        . venv/bin/activate
-                        python scripts/promote-model.py --list || echo "⚠️  Could not retrieve model info"
-                        echo ""
-                        echo "========================================="
-                        echo "📊 Access URLs"
-                        echo "========================================="
-                        SERVER_IP=$(hostname -I | awk '{print $1}')
-                        echo "MLflow UI: http://$SERVER_IP:5001"
-                        echo ""
-                        echo "💡 To access services from your local machine:"
-                        echo ""
-                        echo "1️⃣  API (FastAPI + Swagger):"
-                        echo "   kubectl port-forward service/heart-disease-api-service 8000:80"
-                        echo "   Then visit: http://localhost:8000/docs"
-                        echo ""
-                        echo "2️⃣  MLflow UI (from your local machine):"
-                        echo "   ssh -L 5001:localhost:5001 cloud@$SERVER_IP"
-                        echo "   Then visit: http://localhost:5001"
-                        echo ""
-                        echo "3️⃣  Prometheus Metrics:"
-                        echo "   kubectl port-forward service/heart-disease-api-service 8000:80"
-                        echo "   Then visit: http://localhost:8000/metrics"
-                        echo ""
-                        echo "4️⃣  Manually promote a model (if needed):"
-                        echo "   python scripts/promote-model.py <model-name>"
-                        echo "   python scripts/promote-model.py --auto"
-                        echo "========================================="
-                    '''
+                try {
+                    withCredentials([file(credentialsId: 'kubeconfig-minikube', variable: 'KUBECONFIG')]) {
+                        sh '''
+                            echo "========================================="
+                            echo "🎉 Deployment Summary"
+                            echo "========================================="
+                            echo "📦 Build Number: ${BUILD_NUMBER}"
+                            echo "🐳 Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
+                            echo ""
+                            echo "☸️  Kubernetes Pods:"
+                            kubectl get pods -l app=heart-disease-api || echo "⚠️  Could not retrieve pod info"
+                            echo ""
+                            echo "🌐 Service Info:"
+                            kubectl get service heart-disease-api-service || echo "⚠️  Could not retrieve service info"
+                            echo ""
+                            echo "========================================="
+                            echo "🤖 MLflow Model Registry"
+                            echo "========================================="
+                            if [ -d "venv" ]; then
+                                . venv/bin/activate
+                                python scripts/promote-model.py --list || echo "⚠️  Could not retrieve model info"
+                            else
+                                echo "⚠️  Virtual environment not found"
+                            fi
+                            echo ""
+                            echo "========================================="
+                            echo "📊 Access URLs"
+                            echo "========================================="
+                            SERVER_IP=$(hostname -I | awk '{print $1}')
+                            echo "MLflow UI: http://$SERVER_IP:5001"
+                            echo ""
+                            echo "💡 To access services from your local machine:"
+                            echo ""
+                            echo "1️⃣  API (FastAPI + Swagger):"
+                            echo "   kubectl port-forward service/heart-disease-api-service 8000:80"
+                            echo "   Then visit: http://localhost:8000/docs"
+                            echo ""
+                            echo "2️⃣  MLflow UI (from your local machine):"
+                            echo "   ssh -L 5001:localhost:5001 cloud@$SERVER_IP"
+                            echo "   Then visit: http://localhost:5001"
+                            echo ""
+                            echo "3️⃣  Prometheus Metrics:"
+                            echo "   kubectl port-forward service/heart-disease-api-service 8000:80"
+                            echo "   Then visit: http://localhost:8000/metrics"
+                            echo ""
+                            echo "4️⃣  Manually promote a model (if needed):"
+                            echo "   python scripts/promote-model.py <model-name>"
+                            echo "   python scripts/promote-model.py --auto"
+                            echo "========================================="
+                        '''
+                    }
+                } catch (Exception e) {
+                    echo "⚠️  Could not generate full deployment summary (kubeconfig credential may be missing)"
+                    echo "📦 Build Number: ${BUILD_NUMBER}"
+                    echo "🐳 Docker Image: ${DOCKER_IMAGE}:${IMAGE_TAG}"
+                    echo ""
+                    echo "💡 To see full deployment info, add kubeconfig-minikube credential to Jenkins"
                 }
             }
         }
@@ -506,25 +531,27 @@ pipeline {
         always {
             echo '🧹 Cleaning up...'
             sh '''
-                # Use Minikube's Docker daemon for cleanup
+                # Use Minikube's Docker daemon for cleanup (if available)
                 if command -v minikube &> /dev/null; then
-                    eval $(minikube docker-env) || true
+                    eval $(minikube docker-env) 2>/dev/null || true
                 fi
 
-                # Clean up ALL test containers
+                # Clean up ALL test containers (ignore errors)
                 echo "Removing all test containers..."
-                docker ps -a | grep test-api- | awk '{print $1}' | xargs -r docker rm -f 2>/dev/null || true
+                docker ps -a 2>/dev/null | grep test-api- | awk '{print $1}' | xargs -r docker rm -f 2>/dev/null || true
 
-                # Also clean up any containers using port 8001
+                # Also clean up any containers using port 8001 (ignore errors)
                 echo "Removing containers using port 8001..."
-                docker ps --filter "publish=8001" -q | xargs -r docker stop 2>/dev/null || true
-                docker ps -a --filter "publish=8001" -q | xargs -r docker rm -f 2>/dev/null || true
+                docker ps --filter "publish=8001" -q 2>/dev/null | xargs -r docker stop 2>/dev/null || true
+                docker ps -a --filter "publish=8001" -q 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
 
-                # Clean up old Docker images (keep last 5)
-                docker images ${DOCKER_IMAGE} --format "{{.ID}}" | tail -n +6 | xargs -r docker rmi || true
+                # Clean up old Docker images (keep last 5) - ignore errors
+                docker images ${DOCKER_IMAGE} --format "{{.ID}}" 2>/dev/null | tail -n +6 | xargs -r docker rmi 2>/dev/null || true
 
-                # Clean up Python virtual environment
-                rm -rf venv || true
+                # Clean up Python virtual environment (ignore errors)
+                rm -rf venv 2>/dev/null || true
+                
+                echo "✅ Cleanup completed"
             '''
         }
     }
