@@ -250,7 +250,51 @@ sum(rate(predictions_total{result="disease"}[5m])) + sum(rate(predictions_total{
 
 ## 🔍 Troubleshooting
 
-### Dashboard Shows "No Data"
+### Dashboard Shows "No Data" ⚠️ COMMON ISSUE
+
+**Quick Fix:**
+
+```bash
+# Run automated fix script
+./scripts/fix-grafana-datasource.sh
+
+# OR run diagnostics first
+./scripts/diagnose-monitoring.sh
+```
+
+**Manual Fix:**
+
+1. **Check Prometheus data source is configured**:
+   - Go to: Configuration → Data Sources
+   - Should see "Prometheus" in the list
+   - If not, click "Add data source" → Select "Prometheus"
+   - **URL must be**: `http://prometheus:9090` (NOT localhost!)
+   - Click "Save & Test" - should show green checkmark
+
+2. **Verify metrics exist**:
+   ```bash
+   # Port-forward to Prometheus
+   kubectl port-forward service/prometheus 9090:9090
+
+   # Visit http://localhost:9090/graph
+   # Run query: predictions_total
+   # Should see results
+   ```
+
+3. **Make test predictions** (to generate metrics):
+   ```bash
+   kubectl port-forward service/heart-disease-api-service 8000:80
+   # Visit http://localhost:8000/docs
+   # Make some predictions
+   ```
+
+4. **Check time range** in Grafana:
+   - Click time picker (top right)
+   - Select "Last 5 minutes" or "Last 15 minutes"
+
+**See detailed guide**: `docs/GRAFANA-NO-DATA-FIX.md`
+
+### Other Issues
 
 1. **Check Prometheus connection**:
    - Configuration → Data Sources → Prometheus
