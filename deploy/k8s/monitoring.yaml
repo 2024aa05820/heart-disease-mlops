@@ -36,6 +36,7 @@ spec:
             - '--web.console.templates=/usr/share/prometheus/consoles'
             - '--storage.tsdb.retention.time=15d'
             - '--web.enable-lifecycle'
+            - '--web.enable-admin-api'
       volumes:
         - name: prometheus-config
           configMap:
@@ -132,7 +133,7 @@ data:
             action: replace
             target_label: service_name
 
-    # Alert rules (inline for simplicity)
+    # Alert rules
     rule_files:
       - '/etc/prometheus/alerts/alerts.yml'
 ---
