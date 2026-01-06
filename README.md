@@ -6,7 +6,52 @@ A production-ready machine learning solution for predicting heart disease risk, 
 
 ## 🚀 Quick Start
 
-### Complete ML Workflow (Train → Deploy)
+### ⭐ NEW: One-Command Complete Setup (Rocky Linux)
+
+**Set up the entire project in one command!**
+
+```bash
+# Clone repository
+git clone https://github.com/2024aa05820/heart-disease-mlops.git
+cd heart-disease-mlops
+
+# Make executable
+chmod +x setup-project.sh
+
+# Run complete setup (PostgreSQL backend)
+sudo ./setup-project.sh
+
+# OR use SQLite backend (simpler)
+sudo ./setup-project.sh --sqlite
+```
+
+**What it does:**
+- ✅ Installs all system dependencies
+- ✅ Sets up PostgreSQL or SQLite database
+- ✅ Creates Python virtual environment
+- ✅ Downloads dataset
+- ✅ Starts MLflow tracking server
+- ✅ Trains ML models
+- ✅ Configures systemd services
+- ✅ Creates helper scripts
+
+**After setup:**
+```bash
+# Access MLflow UI
+http://localhost:5000
+
+# Check status
+./check-status.sh
+
+# Start API
+./start-api.sh
+```
+
+📖 **Complete Guide:** [SETUP-README.md](SETUP-README.md) | [docs/COMPLETE-SETUP-GUIDE.md](docs/COMPLETE-SETUP-GUIDE.md)
+
+---
+
+### Alternative: Manual ML Workflow (Train → Deploy)
 
 **⚠️ IMPORTANT:** You must train models before deployment!
 
@@ -28,11 +73,13 @@ kubectl apply -f deploy/k8s/
 ```
 
 **📖 Guides:**
+- **One-Command Setup:** [SETUP-README.md](SETUP-README.md) ⭐ NEW
+- **Complete Setup Guide:** [docs/COMPLETE-SETUP-GUIDE.md](docs/COMPLETE-SETUP-GUIDE.md) ⭐ NEW
 - **Model Training:** [docs/MLFLOW-FILESTORE-YAML-FIX.md](docs/MLFLOW-FILESTORE-YAML-FIX.md)
 - **Rocky Linux Setup:** [ROCKY_LINUX_QUICKSTART.md](ROCKY_LINUX_QUICKSTART.md)
 - **Deployment Options:** [DEPLOYMENT_OPTIONS_SUMMARY.md](DEPLOYMENT_OPTIONS_SUMMARY.md)
 
-### Rocky Linux (Recommended for Production)
+### Rocky Linux with Docker/Kubernetes
 
 **Deploy in 10 minutes:**
 
