@@ -262,8 +262,19 @@ def train_and_log_model(
             mlflow.log_figure(fi_fig, f"feature_importance_{model_name}.png")
             plt.close(fi_fig)
 
-        # Log model
-        mlflow.sklearn.log_model(model, model_name)
+        # Log model with signature and input example
+        from mlflow.models.signature import infer_signature
+
+        signature = infer_signature(X_train, model.predict(X_train))
+        input_example = X_train[:5]  # First 5 rows as example
+
+        mlflow.sklearn.log_model(
+            model,
+            model_name,
+            signature=signature,
+            input_example=input_example,
+            registered_model_name=f"heart-disease-{model_name}"
+        )
 
         # Print classification report
         print(f"\n{'='*50}")
@@ -343,6 +354,33 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
 
     print(f"   Best model: {best_model_name}")
     print(f"   ROC-AUC: {best_metrics['roc_auc']:.4f}")
+
+    # Promote best model to Production stage in Model Registry
+    print("\n   Promoting best model to Production stage...")
+    try:
+        from mlflow.tracking import MlflowClient
+        client = MlflowClient()
+
+        # Get the registered model name
+        registered_model_name = f"heart-disease-{best_model_name}"
+
+        # Get the latest version of the best model
+        latest_versions = client.get_latest_versions(registered_model_name, stages=["None"])
+        if latest_versions:
+            latest_version = latest_versions[0].version
+
+            # Transition to Production
+            client.transition_model_version_stage(
+                name=registered_model_name,
+                version=latest_version,
+                stage="Production",
+                archive_existing_versions=True
+            )
+            print(f"   ✅ Model {registered_model_name} v{latest_version} promoted to Production")
+        else:
+            print(f"   ⚠️  No versions found for {registered_model_name}")
+    except Exception as e:
+        print(f"   ⚠️  Could not promote model to Production: {e}")
 
     # Save best model and preprocessor
     print("\n6. Saving artifacts...")
