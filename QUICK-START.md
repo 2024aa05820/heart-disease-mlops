@@ -146,6 +146,16 @@ tail -f logs/mlflow.log
 
 ## 🐛 Troubleshooting
 
+### Error: "Cannot uninstall requests" during setup
+
+This happens because Rocky Linux has `requests` installed via RPM. Fix it:
+
+```bash
+sudo ./scripts/fix-mlflow-install.sh
+```
+
+This creates a Python virtual environment for MLflow to avoid conflicts.
+
 ### Jenkins can't access Minikube
 
 ```bash

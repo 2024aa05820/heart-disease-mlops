@@ -174,10 +174,32 @@ echo ""
 
 # Install MLflow and dependencies
 echo -e "${YELLOW}📦 Installing MLflow and Python dependencies...${NC}"
-pip3 install --upgrade pip
-pip3 install mlflow scikit-learn pandas numpy matplotlib seaborn
-echo -e "${GREEN}✅ MLflow and dependencies installed${NC}"
-mlflow --version
+
+# Create a virtual environment for MLflow to avoid conflicts with system packages
+echo -e "${YELLOW}Creating Python virtual environment...${NC}"
+python3 -m venv /opt/mlflow-env
+
+# Activate and install packages in the virtual environment
+echo -e "${YELLOW}Installing Python packages in virtual environment (this may take a few minutes)...${NC}"
+source /opt/mlflow-env/bin/activate
+pip install --upgrade pip
+pip install mlflow scikit-learn pandas numpy matplotlib seaborn
+deactivate
+
+# Create a wrapper script for mlflow command
+echo -e "${YELLOW}Creating MLflow wrapper script...${NC}"
+cat > /usr/local/bin/mlflow << 'EOF'
+#!/bin/bash
+source /opt/mlflow-env/bin/activate
+exec python -m mlflow "$@"
+EOF
+chmod +x /usr/local/bin/mlflow
+
+# Make the virtual environment accessible to jenkins user
+chown -R jenkins:jenkins /opt/mlflow-env
+
+echo -e "${GREEN}✅ MLflow and dependencies installed in virtual environment${NC}"
+/usr/local/bin/mlflow --version
 echo ""
 
 # Configure firewall

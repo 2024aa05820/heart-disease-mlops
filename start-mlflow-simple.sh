@@ -3,6 +3,13 @@
 # Simple MLflow starter script
 # Works from any directory
 
+# Check if virtual environment exists
+if [ -d "/opt/mlflow-env" ]; then
+    MLFLOW_CMD="/opt/mlflow-env/bin/mlflow"
+else
+    MLFLOW_CMD="mlflow"
+fi
+
 echo "🚀 Starting MLflow UI..."
 
 # Check if MLflow is already running
@@ -22,7 +29,8 @@ mkdir -p logs
 
 # Start MLflow
 echo "Starting MLflow on port 5001..."
-nohup mlflow ui --host 0.0.0.0 --port 5001 > logs/mlflow.log 2>&1 &
+echo "Using: $MLFLOW_CMD"
+nohup $MLFLOW_CMD ui --host 0.0.0.0 --port 5001 > logs/mlflow.log 2>&1 &
 
 # Get the PID
 MLFLOW_PID=$!

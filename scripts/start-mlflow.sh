@@ -16,6 +16,13 @@ NC='\033[0m'
 MLFLOW_PORT=5001
 MLFLOW_HOST="0.0.0.0"
 
+# Check if virtual environment exists
+if [ -d "/opt/mlflow-env" ]; then
+    MLFLOW_CMD="/opt/mlflow-env/bin/mlflow"
+else
+    MLFLOW_CMD="mlflow"
+fi
+
 echo "🚀 Starting MLflow UI..."
 
 # Check if MLflow is already running
@@ -54,9 +61,10 @@ LOG_FILE="$WORKSPACE/logs/mlflow.log"
 # Start MLflow UI
 echo "Starting MLflow UI on port $MLFLOW_PORT..."
 echo "Log file: $LOG_FILE"
+echo "Using MLflow command: $MLFLOW_CMD"
 
 # Start MLflow with proper error handling
-nohup mlflow ui --host $MLFLOW_HOST --port $MLFLOW_PORT --backend-store-uri file:///$WORKSPACE/mlruns > "$LOG_FILE" 2>&1 &
+nohup $MLFLOW_CMD ui --host $MLFLOW_HOST --port $MLFLOW_PORT --backend-store-uri file:///$WORKSPACE/mlruns > "$LOG_FILE" 2>&1 &
 
 MLFLOW_PID=$!
 
