@@ -1,0 +1,386 @@
+# 📊 Monitoring Architecture
+
+Complete overview of the monitoring stack for Heart Disease MLOps project.
+
+---
+
+## 🏗️ Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Kubernetes Cluster                          │
+│                                                                     │
+│  ┌──────────────────┐         ┌──────────────────┐                │
+│  │  Heart Disease   │         │   Prometheus     │                │
+│  │      API         │◄────────│   (Scraper)      │                │
+│  │                  │ scrape  │                  │                │
+│  │  Port: 8000      │         │  Port: 9090      │                │
+│  │  /metrics        │         │                  │                │
+│  └──────────────────┘         └────────┬─────────┘                │
+│           │                             │                          │
+│           │                             │ query                    │
+│           │                             │                          │
+│           │                    ┌────────▼─────────┐                │
+│           │                    │    Grafana       │                │
+│           │                    │  (Visualization) │                │
+│           │                    │                  │                │
+│           │                    │  Port: 3000      │                │
+│           │                    └──────────────────┘                │
+│           │                                                         │
+└───────────┼─────────────────────────────────────────────────────────┘
+            │
+            │ port-forward
+            │
+    ┌───────▼────────┐
+    │  Your Browser  │
+    │                │
+    │  localhost:3000 (Grafana)                                      │
+    │  localhost:9090 (Prometheus)                                   │
+    │  localhost:8000 (API)                                          │
+    └────────────────┘
+```
+
+---
+
+## 🔄 Data Flow
+
+### 1. Metrics Generation
+```
+User Request → FastAPI → Process → Generate Metrics
+                                         │
+                                         ▼
+                                  /metrics endpoint
+```
+
+### 2. Metrics Collection
+```
+Prometheus → Scrape /metrics every 15s → Store in TSDB
+```
+
+### 3. Metrics Visualization
+```
+Grafana → Query Prometheus → Display in Dashboard
+```
+
+---
+
+## 📊 Components
+
+### 1. Heart Disease API (FastAPI)
+
+**Purpose**: ML prediction service with metrics
+
+**Metrics Exposed**:
+- `predictions_total` - Counter of predictions by result
+- `prediction_latency_seconds` - Histogram of prediction times
+- `request_count_total` - Counter of all requests
+
+**Endpoint**: `/metrics`
+
+**Configuration**:
+```yaml
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+```
+
+---
+
+### 2. Prometheus
+
+**Purpose**: Metrics collection and storage
+
+**Features**:
+- Time-series database
+- PromQL query language
+- Service discovery (Kubernetes)
+- Alerting rules
+
+**Configuration**:
+```yaml
+scrape_configs:
+  - job_name: 'heart-disease-api'
+    scrape_interval: 15s
+    kubernetes_sd_configs:
+      - role: pod
+```
+
+**Storage**: In-memory + local disk (ephemeral)
+
+---
+
+### 3. Grafana
+
+**Purpose**: Metrics visualization and dashboards
+
+**Features**:
+- Interactive dashboards
+- Multiple data sources
+- Alerting
+- User management
+- Dashboard sharing
+
+**Default Credentials**:
+- Username: `admin`
+- Password: `admin`
+
+---
+
+## 📈 Metrics Details
+
+### Counter: `predictions_total`
+
+**Type**: Counter (always increasing)
+
+**Labels**:
+- `result`: "disease" or "no_disease"
+
+**Example**:
+```
+predictions_total{result="disease"} 42
+predictions_total{result="no_disease"} 58
+```
+
+**Queries**:
+```promql
+# Total predictions
+sum(predictions_total)
+
+# Predictions by result
+sum by (result) (predictions_total)
+
+# Prediction rate (per second)
+rate(predictions_total[5m])
+```
+
+---
+
+### Histogram: `prediction_latency_seconds`
+
+**Type**: Histogram (distribution of values)
+
+**Buckets**: Auto-generated by Prometheus client
+
+**Metrics Generated**:
+- `prediction_latency_seconds_bucket{le="0.005"}` - Count ≤ 5ms
+- `prediction_latency_seconds_bucket{le="0.01"}` - Count ≤ 10ms
+- `prediction_latency_seconds_bucket{le="0.025"}` - Count ≤ 25ms
+- ... (more buckets)
+- `prediction_latency_seconds_sum` - Total time
+- `prediction_latency_seconds_count` - Total count
+
+**Queries**:
+```promql
+# Average latency
+rate(prediction_latency_seconds_sum[5m]) / rate(prediction_latency_seconds_count[5m])
+
+# 95th percentile
+histogram_quantile(0.95, rate(prediction_latency_seconds_bucket[5m]))
+
+# 99th percentile
+histogram_quantile(0.99, rate(prediction_latency_seconds_bucket[5m]))
+```
+
+---
+
+### Counter: `request_count_total`
+
+**Type**: Counter
+
+**Labels**:
+- `method`: HTTP method (GET, POST, etc.)
+- `endpoint`: URL path (/predict, /health, etc.)
+- `status`: HTTP status code (200, 404, 500, etc.)
+
+**Example**:
+```
+request_count_total{method="POST",endpoint="/predict",status="200"} 100
+request_count_total{method="GET",endpoint="/health",status="200"} 50
+request_count_total{method="POST",endpoint="/predict",status="500"} 2
+```
+
+**Queries**:
+```promql
+# Total requests
+sum(request_count_total)
+
+# Requests by endpoint
+sum by (endpoint) (request_count_total)
+
+# Error rate (5xx errors)
+sum(rate(request_count_total{status=~"5.."}[5m])) / sum(rate(request_count_total[5m])) * 100
+```
+
+---
+
+## 🔍 PromQL Query Patterns
+
+### Rate Calculations
+
+```promql
+# Rate over 5 minutes
+rate(metric_name[5m])
+
+# Rate over 1 hour
+rate(metric_name[1h])
+```
+
+### Aggregations
+
+```promql
+# Sum all values
+sum(metric_name)
+
+# Sum by label
+sum by (label_name) (metric_name)
+
+# Average
+avg(metric_name)
+
+# Max
+max(metric_name)
+```
+
+### Filtering
+
+```promql
+# Exact match
+metric_name{label="value"}
+
+# Regex match
+metric_name{label=~"pattern"}
+
+# Not equal
+metric_name{label!="value"}
+
+# Multiple conditions
+metric_name{label1="value1",label2="value2"}
+```
+
+---
+
+## 🚀 Deployment
+
+### Deploy Monitoring Stack
+
+```bash
+./scripts/setup-monitoring.sh
+```
+
+This deploys:
+- Prometheus Deployment
+- Prometheus Service (NodePort 30090)
+- Prometheus ConfigMap
+- Grafana Deployment
+- Grafana Service (NodePort 30300)
+
+---
+
+### Access Services
+
+**Grafana**:
+```bash
+kubectl port-forward service/grafana 3000:3000
+# http://localhost:3000
+```
+
+**Prometheus**:
+```bash
+kubectl port-forward service/prometheus 9090:9090
+# http://localhost:9090
+```
+
+**API**:
+```bash
+kubectl port-forward service/heart-disease-api-service 8000:80
+# http://localhost:8000
+```
+
+---
+
+## 📊 Dashboard Panels
+
+### Panel Types
+
+1. **Stat** - Single value with sparkline
+2. **Gauge** - Value with min/max and thresholds
+3. **Time Series** - Line/area chart over time
+4. **Pie Chart** - Distribution of values
+5. **Bar Chart** - Comparison of values
+6. **Heatmap** - Distribution over time
+
+### Pre-built Dashboard
+
+File: `grafana/heart-disease-api-dashboard.json`
+
+Panels:
+1. Total Predictions (Stat)
+2. Predictions/sec (Gauge)
+3. Avg Latency (Stat)
+4. Error Rate (Gauge)
+5. Predictions Over Time (Time Series)
+6. Predictions by Result (Pie Chart)
+
+---
+
+## 🔧 Configuration Files
+
+### Prometheus Config
+
+Location: `deploy/k8s/monitoring.yaml` (ConfigMap)
+
+```yaml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'heart-disease-api'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+```
+
+### API Annotations
+
+Location: `deploy/k8s/deployment.yaml`
+
+```yaml
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+```
+
+---
+
+## 📚 Resources
+
+- **Prometheus Docs**: https://prometheus.io/docs/
+- **Grafana Docs**: https://grafana.com/docs/
+- **PromQL Guide**: https://prometheus.io/docs/prometheus/latest/querying/basics/
+- **Kubernetes Monitoring**: https://kubernetes.io/docs/tasks/debug-application-cluster/resource-metrics-pipeline/
+
+---
+
+## ✅ Monitoring Checklist
+
+- [ ] Prometheus deployed and running
+- [ ] Grafana deployed and running
+- [ ] API has Prometheus annotations
+- [ ] API exposes /metrics endpoint
+- [ ] Prometheus scraping API metrics
+- [ ] Grafana connected to Prometheus
+- [ ] Dashboard imported
+- [ ] Metrics visible in dashboard
+- [ ] Auto-refresh enabled
+- [ ] Alerts configured (optional)
+
+---
+
+Happy Monitoring! 📊✨
+
