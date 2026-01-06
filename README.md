@@ -111,46 +111,35 @@ flowchart TB
 sequenceDiagram
     participant Dev as Developer
     participant GH as GitHub
-    participant GA as GitHub Actions CI
-    participant J as Jenkins CD
+    participant GA as GitHub Actions
+    participant J as Jenkins
     participant MLF as MLflow
     participant K8s as Kubernetes
     participant API as API Service
-    participant Mon as Prometheus/Grafana
-    participant User as End User
-    
-    rect rgb(230, 245, 255)
-        Note over Dev,GA: CI Pipeline - Pull Request
-        Dev->>GH: 1. Create Pull Request
-        GH->>GA: 2. Trigger CI Workflow
-        GA->>GA: 3. Lint Code (ruff, black)
-        GA->>GA: 4. Run Tests (pytest)
-        GA->>GA: 5. Train Model
-        GA->>GA: 6. Build & Test Docker
-        GA-->>GH: 7. CI Passed ✓
-    end
-    
-    rect rgb(255, 243, 224)
-        Note over Dev,J: CD Pipeline - Production
-        Dev->>GH: 8. Merge PR to main
-        GH->>J: 9. Webhook Trigger
-        J->>J: 10. Checkout & Setup
-        J->>J: 11. Train Models
-        J->>MLF: 12. Log Metrics & Register
-        MLF-->>J: 13. Model Registered
-        J->>J: 14. Build Docker Image
-        J->>K8s: 15. Deploy to Kubernetes
-        K8s->>API: 16. Start API Pods
-        J->>J: 17. Verify Deployment
-    end
-    
-    rect rgb(232, 245, 233)
-        Note over User,Mon: Production Usage
-        User->>API: POST /predict
-        API-->>User: Prediction Response
-        API->>Mon: Expose /metrics
-        Mon->>Mon: Visualize Dashboards
-    end
+    participant Mon as Monitoring
+
+    Note over Dev,GA: === CI Pipeline (Pull Request) ===
+    Dev->>GH: 1. Create Pull Request
+    GH->>GA: 2. Trigger CI Workflow
+    GA->>GA: 3. Lint (ruff, black)
+    GA->>GA: 4. Test (pytest)
+    GA->>GA: 5. Train Model
+    GA->>GA: 6. Build Docker
+    GA-->>GH: 7. CI Passed
+
+    Note over Dev,K8s: === CD Pipeline (PR Merge) ===
+    Dev->>GH: 8. Merge PR to main
+    GH->>J: 9. Webhook Trigger
+    J->>J: 10. Setup & Test
+    J->>J: 11. Train Models
+    J->>MLF: 12. Register Model
+    J->>J: 13. Build Docker
+    J->>K8s: 14. Deploy
+    J->>API: 15. Verify
+
+    Note over API,Mon: === Production ===
+    API->>Mon: Expose /metrics
+    Mon->>Mon: Dashboards
 ```
 
 ### Deployment Architecture
