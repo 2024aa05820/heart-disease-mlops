@@ -3,12 +3,14 @@
 # Start MLflow UI
 # Run this on the Jenkins server
 
-set -e
+# Don't exit on error for initial checks
+# set -e
 
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 MLFLOW_PORT=5001
@@ -35,50 +37,72 @@ if pgrep -f "mlflow ui" > /dev/null; then
     exit 0
 fi
 
-# Get the workspace directory
-if [ -d "/var/lib/jenkins/workspace/heart-disease-mlops" ]; then
-    WORKSPACE="/var/lib/jenkins/workspace/heart-disease-mlops"
-elif [ -d "$PWD" ]; then
-    WORKSPACE="$PWD"
-else
-    echo "❌ Cannot find workspace directory"
-    exit 1
-fi
+# Get the workspace directory - use current directory
+WORKSPACE="$PWD"
 
-cd "$WORKSPACE"
+echo "Working directory: $WORKSPACE"
 
 # Create mlruns directory if it doesn't exist
 mkdir -p mlruns
 
+# Create logs directory for mlflow logs
+mkdir -p logs
+
+# Set log file path
+LOG_FILE="$WORKSPACE/logs/mlflow.log"
+
 # Start MLflow UI
 echo "Starting MLflow UI on port $MLFLOW_PORT..."
-nohup mlflow ui --host $MLFLOW_HOST --port $MLFLOW_PORT --backend-store-uri file:///$WORKSPACE/mlruns > mlflow.log 2>&1 &
+echo "Log file: $LOG_FILE"
+
+# Start MLflow with proper error handling
+nohup mlflow ui --host $MLFLOW_HOST --port $MLFLOW_PORT --backend-store-uri file:///$WORKSPACE/mlruns > "$LOG_FILE" 2>&1 &
+
+MLFLOW_PID=$!
 
 # Wait a bit for it to start
+echo "Waiting for MLflow to start..."
 sleep 3
 
 # Check if it started successfully
-if pgrep -f "mlflow ui" > /dev/null; then
-    PID=$(pgrep -f "mlflow ui")
+if ps -p $MLFLOW_PID > /dev/null 2>&1; then
     echo -e "${GREEN}✅ MLflow UI started successfully${NC}"
-    echo "   PID: $PID"
+    echo "   PID: $MLFLOW_PID"
     echo "   Port: $MLFLOW_PORT"
-    echo "   Log file: $WORKSPACE/mlflow.log"
+    echo "   Log file: $LOG_FILE"
     echo ""
-    
+
     # Get server IP
-    SERVER_IP=$(hostname -I | awk '{print $1}' || echo "YOUR_SERVER_IP")
-    
+    SERVER_IP=$(hostname -I | awk '{print $1}' 2>/dev/null || hostname)
+
     echo -e "${BLUE}📊 Access MLflow UI:${NC}"
     echo ""
-    echo "From your LOCAL machine, run:"
-    echo -e "  ${GREEN}ssh -L 5001:localhost:$MLFLOW_PORT cloud@$SERVER_IP${NC}"
+    echo "Option 1 - Direct access (if on same machine):"
+    echo "   http://localhost:$MLFLOW_PORT"
     echo ""
-    echo "Then visit: http://localhost:5001"
+    echo "Option 2 - SSH tunnel (from remote machine):"
+    echo -e "   ${GREEN}ssh -L 5001:localhost:$MLFLOW_PORT cloud@$SERVER_IP${NC}"
+    echo "   Then visit: http://localhost:5001"
+    echo ""
+    echo "To view logs:"
+    echo "   tail -f $LOG_FILE"
+    echo ""
+    echo "To stop MLflow:"
+    echo "   kill $MLFLOW_PID"
     echo ""
 else
-    echo "❌ Failed to start MLflow UI"
-    echo "Check the log file: $WORKSPACE/mlflow.log"
+    echo -e "${RED}❌ Failed to start MLflow UI${NC}"
+    echo ""
+    echo "Check the log file for errors:"
+    echo "   cat $LOG_FILE"
+    echo ""
+
+    # Show last few lines of log if it exists
+    if [ -f "$LOG_FILE" ]; then
+        echo "Last 10 lines of log:"
+        tail -10 "$LOG_FILE"
+    fi
+
     exit 1
 fi
 

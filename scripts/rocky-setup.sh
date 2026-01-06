@@ -117,12 +117,30 @@ dnf install -y git curl wget jq unzip python3 python3-pip
 echo -e "${GREEN}✅ Tools installed${NC}"
 echo ""
 
+# Install MLflow and dependencies
+echo -e "${YELLOW}📦 Installing MLflow and Python dependencies...${NC}"
+pip3 install --upgrade pip
+pip3 install mlflow scikit-learn pandas numpy matplotlib seaborn
+echo -e "${GREEN}✅ MLflow and dependencies installed${NC}"
+mlflow --version
+echo ""
+
 # Configure firewall
 echo -e "${YELLOW}🔥 Configuring firewall...${NC}"
 firewall-cmd --permanent --add-port=8080/tcp  # Jenkins
 firewall-cmd --permanent --add-port=5001/tcp  # MLflow
+firewall-cmd --permanent --add-port=3000/tcp  # Grafana
+firewall-cmd --permanent --add-port=9090/tcp  # Prometheus
 firewall-cmd --reload
 echo -e "${GREEN}✅ Firewall configured${NC}"
+echo ""
+
+# Create MLflow directories
+echo -e "${YELLOW}📁 Creating MLflow directories...${NC}"
+mkdir -p /var/lib/jenkins/workspace/heart-disease-mlops/mlruns
+mkdir -p /var/lib/jenkins/workspace/heart-disease-mlops/logs
+chown -R jenkins:jenkins /var/lib/jenkins/workspace/heart-disease-mlops
+echo -e "${GREEN}✅ MLflow directories created${NC}"
 echo ""
 
 # Get server IP
@@ -145,6 +163,7 @@ echo "  ✅ kubectl"
 echo "  ✅ Minikube"
 echo "  ✅ Jenkins"
 echo "  ✅ Python 3 + Tools"
+echo "  ✅ MLflow + ML Libraries"
 echo ""
 echo -e "${YELLOW}⚠️  IMPORTANT NEXT STEPS (Follow in Order):${NC}"
 echo ""
@@ -189,6 +208,28 @@ echo "   - Click 'Build Now' in Jenkins"
 echo "   - Monitor console output"
 echo "   - All stages should pass ✅"
 echo ""
+echo "7. ${YELLOW}Access Services:${NC}"
+echo ""
+echo "   ${BLUE}MLflow UI (Port 5001):${NC}"
+echo "   - Check status: ${BLUE}./scripts/check-all-services.sh${NC}"
+echo "   - Start MLflow: ${BLUE}./scripts/start-mlflow.sh${NC}"
+echo "   - From local machine: ${BLUE}ssh -L 5001:localhost:5001 cloud@${SERVER_IP}${NC}"
+echo "   - Then visit: ${BLUE}http://localhost:5001${NC}"
+echo ""
+echo "   ${BLUE}Grafana (Port 3000):${NC}"
+echo "   - Port forward: ${BLUE}kubectl port-forward service/grafana 3000:3000${NC}"
+echo "   - Visit: ${BLUE}http://localhost:3000${NC} (admin/admin)"
+echo ""
+echo "   ${BLUE}Prometheus (Port 9090):${NC}"
+echo "   - Port forward: ${BLUE}kubectl port-forward service/prometheus 9090:9090${NC}"
+echo "   - Visit: ${BLUE}http://localhost:9090${NC}"
+echo ""
+echo "   ${BLUE}API (Port 8000):${NC}"
+echo "   - Port forward: ${BLUE}kubectl port-forward service/heart-disease-api-service 8000:80${NC}"
+echo "   - Visit: ${BLUE}http://localhost:8000/docs${NC}"
+echo ""
+echo "   ${GREEN}📖 Full guide: ACCESS-SERVICES.md${NC}"
+echo ""
 echo -e "${GREEN}============================================${NC}"
 echo -e "${GREEN}  📚 Additional Resources${NC}"
 echo -e "${GREEN}============================================${NC}"
@@ -217,6 +258,19 @@ echo "   Solution:"
 echo "   - Already fixed - images are built in Minikube's Docker"
 echo "   - No need to pull from registry"
 echo "   - Ensure you ran: ${BLUE}sudo ./scripts/configure-jenkins-minikube.sh${NC}"
+echo ""
+echo "❌ Error: 'MLflow not accessible'"
+echo "   Solution:"
+echo "   1. Check if running: ${BLUE}pgrep -f 'mlflow ui'${NC}"
+echo "   2. Start MLflow: ${BLUE}./scripts/start-mlflow.sh${NC}"
+echo "   3. Check logs: ${BLUE}tail -f logs/mlflow.log${NC}"
+echo "   4. Verify port: ${BLUE}netstat -tlnp | grep 5001${NC}"
+echo ""
+echo "❌ Error: 'Grafana/Prometheus not accessible'"
+echo "   Solution:"
+echo "   1. Check pods: ${BLUE}kubectl get pods${NC}"
+echo "   2. Deploy monitoring: ${BLUE}./scripts/setup-monitoring.sh${NC}"
+echo "   3. Port forward: ${BLUE}kubectl port-forward service/grafana 3000:3000${NC}"
 echo ""
 echo -e "${GREEN}============================================${NC}"
 echo ""
