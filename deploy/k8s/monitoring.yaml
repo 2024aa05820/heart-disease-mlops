@@ -25,6 +25,8 @@ spec:
           volumeMounts:
             - name: prometheus-config
               mountPath: /etc/prometheus
+            - name: prometheus-alerts
+              mountPath: /etc/prometheus/alerts
             - name: prometheus-storage
               mountPath: /prometheus
           args:
@@ -32,10 +34,14 @@ spec:
             - '--storage.tsdb.path=/prometheus'
             - '--web.console.libraries=/usr/share/prometheus/console_libraries'
             - '--web.console.templates=/usr/share/prometheus/consoles'
+            - '--rules.alert=/etc/prometheus/alerts/alerts.yml'
       volumes:
         - name: prometheus-config
           configMap:
             name: prometheus-config
+        - name: prometheus-alerts
+          configMap:
+            name: prometheus-alerts
         - name: prometheus-storage
           emptyDir: {}
 ---
@@ -92,6 +98,13 @@ data:
           - source_labels: [__meta_kubernetes_pod_name]
             action: replace
             target_label: kubernetes_pod_name
+        # Static config for direct service access
+        static_configs:
+          - targets:
+            - 'heart-disease-api-service:80'
+            labels:
+              job: heart-disease-api
+              service: heart-disease-api
 ---
 # Grafana Deployment
 apiVersion: apps/v1

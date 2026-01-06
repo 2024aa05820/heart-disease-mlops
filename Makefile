@@ -157,6 +157,10 @@ rocky-start:
 	@echo "Minikube:   $$(minikube ip)"
 	@echo "============================================"
 
+rocky-start-low-memory:
+	@echo "🚀 Starting Minikube (Low Memory Mode)..."
+	@./scripts/start-minikube-low-memory.sh
+
 rocky-status:
 	@echo "============================================"
 	@echo "System Status"

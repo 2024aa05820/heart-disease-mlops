@@ -1,0 +1,142 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  labels:
+    app: prometheus
+data:
+  alerts.yml: |
+    groups:
+      - name: heart_disease_api
+        interval: 30s
+        rules:
+          # High Error Rate Alert
+          - alert: HighErrorRate
+            expr: |
+              sum(rate(request_count_total{status=~"5.."}[5m])) 
+              / sum(rate(request_count_total[5m])) * 100 > 5
+            for: 5m
+            labels:
+              severity: warning
+              service: heart-disease-api
+            annotations:
+              summary: "High error rate detected"
+              description: "Error rate is {{ $value | humanizePercentage }}% (threshold: 5%)"
+
+          # Critical Error Rate Alert
+          - alert: CriticalErrorRate
+            expr: |
+              sum(rate(request_count_total{status=~"5.."}[5m])) 
+              / sum(rate(request_count_total[5m])) * 100 > 10
+            for: 2m
+            labels:
+              severity: critical
+              service: heart-disease-api
+            annotations:
+              summary: "Critical error rate detected"
+              description: "Error rate is {{ $value | humanizePercentage }}% (threshold: 10%)"
+
+          # High Latency Alert
+          - alert: HighPredictionLatency
+            expr: |
+              histogram_quantile(0.95, 
+                sum(rate(prediction_latency_seconds_bucket[5m])) by (le)
+              ) > 1.0
+            for: 5m
+            labels:
+              severity: warning
+              service: heart-disease-api
+            annotations:
+              summary: "High prediction latency detected"
+              description: "P95 latency is {{ $value }}s (threshold: 1.0s)"
+
+          # Critical Latency Alert
+          - alert: CriticalPredictionLatency
+            expr: |
+              histogram_quantile(0.95, 
+                sum(rate(prediction_latency_seconds_bucket[5m])) by (le)
+              ) > 2.0
+            for: 2m
+            labels:
+              severity: critical
+              service: heart-disease-api
+            annotations:
+              summary: "Critical prediction latency detected"
+              description: "P95 latency is {{ $value }}s (threshold: 2.0s)"
+
+          # Service Down Alert
+          - alert: APIServiceDown
+            expr: up{job="heart-disease-api"} == 0
+            for: 1m
+            labels:
+              severity: critical
+              service: heart-disease-api
+            annotations:
+              summary: "Heart Disease API is down"
+              description: "The API service has been down for more than 1 minute"
+
+          # Low Request Rate Alert
+          - alert: LowRequestRate
+            expr: sum(rate(request_count_total[5m])) < 0.1
+            for: 10m
+            labels:
+              severity: warning
+              service: heart-disease-api
+            annotations:
+              summary: "Low request rate detected"
+              description: "Request rate is {{ $value }} req/s (threshold: 0.1 req/s)"
+
+          # High Prediction Failure Rate
+          - alert: HighPredictionFailureRate
+            expr: |
+              sum(rate(predictions_total{result="error"}[5m])) 
+              / sum(rate(predictions_total[5m])) * 100 > 5
+            for: 5m
+            labels:
+              severity: warning
+              service: heart-disease-api
+            annotations:
+              summary: "High prediction failure rate"
+              description: "Prediction failure rate is {{ $value | humanizePercentage }}%"
+
+      - name: kubernetes_resources
+        interval: 30s
+        rules:
+          # Pod Crash Loop
+          - alert: PodCrashLooping
+            expr: |
+              rate(kube_pod_container_status_restarts_total[15m]) > 0
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Pod {{ $labels.pod }} is crash looping"
+              description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last 15 minutes"
+
+          # High Memory Usage
+          - alert: HighMemoryUsage
+            expr: |
+              (container_memory_usage_bytes{pod=~"heart-disease-api.*"} 
+              / container_spec_memory_limit_bytes{pod=~"heart-disease-api.*"}) * 100 > 80
+            for: 5m
+            labels:
+              severity: warning
+              service: heart-disease-api
+            annotations:
+              summary: "High memory usage in pod {{ $labels.pod }}"
+              description: "Memory usage is {{ $value | humanizePercentage }}%"
+
+          # High CPU Usage
+          - alert: HighCPUUsage
+            expr: |
+              (rate(container_cpu_usage_seconds_total{pod=~"heart-disease-api.*"}[5m]) 
+              * 100) > 80
+            for: 5m
+            labels:
+              severity: warning
+              service: heart-disease-api
+            annotations:
+              summary: "High CPU usage in pod {{ $labels.pod }}"
+              description: "CPU usage is {{ $value }}%"
+
