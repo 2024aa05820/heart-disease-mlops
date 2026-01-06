@@ -217,7 +217,11 @@ def train_and_log_model(
     Returns:
         Tuple of (trained model, metrics dictionary)
     """
-    with mlflow.start_run(run_name=model_name):
+    with mlflow.start_run(run_name=model_name) as run:
+        # Verify run is active
+        run_id = run.info.run_id
+        print(f"\n   Starting MLflow run: {run_id} ({model_name})")
+        
         # Get model
         model = get_model(model_name, config)
 
@@ -240,8 +244,27 @@ def train_and_log_model(
             cv_folds=config["model"]["cv_folds"],
         )
 
-        # Log metrics
-        mlflow.log_metrics(metrics)
+        # Log metrics - log individually to ensure all are captured
+        print(f"\n   Evaluation Metrics for {model_name}:")
+        logged_metrics = {}
+        for metric_name, metric_value in metrics.items():
+            try:
+                mlflow.log_metric(metric_name, metric_value)
+                logged_metrics[metric_name] = metric_value
+                print(f"      ✅ {metric_name}: {metric_value:.4f}")
+            except Exception as e:
+                print(f"      ❌ Failed to log {metric_name}: {e}")
+        
+        # Verify metrics were logged
+        if len(logged_metrics) != len(metrics):
+            print(f"   ⚠️  Warning: Only {len(logged_metrics)}/{len(metrics)} metrics logged")
+        
+        # Also log as batch (backup method) - this is redundant but ensures compatibility
+        try:
+            mlflow.log_metrics(metrics)
+        except Exception as e:
+            print(f"   ⚠️  Warning: Batch metric logging failed: {e}")
+            print("   ℹ️  Metrics logged individually above")
 
         # Generate and log plots
         y_pred = model.predict(X_test)
@@ -290,6 +313,17 @@ def train_and_log_model(
         print(
             f"CV Accuracy: {metrics['cv_accuracy_mean']:.4f} (+/- {metrics['cv_accuracy_std']:.4f})"
         )
+        
+        # Verify metrics were logged to MLflow
+        try:
+            from mlflow.tracking import MlflowClient
+            client = MlflowClient()
+            run_metrics = client.get_run(run_id).data.metrics
+            print(f"\n   ✅ Verified: {len(run_metrics)} metrics logged to MLflow")
+            print(f"   Run ID: {run_id}")
+            print(f"   Run URI: {mlflow.get_tracking_uri()}")
+        except Exception as e:
+            print(f"\n   ⚠️  Could not verify metrics in MLflow: {e}")
 
     return model, metrics
 
@@ -311,9 +345,28 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
     # Load config
     config = load_config(config_path)
 
-    # Setup MLflow
-    mlflow.set_tracking_uri(config["mlflow"]["tracking_uri"])
-    mlflow.set_experiment(config["mlflow"]["experiment_name"])
+    # Setup MLflow - check environment variable first (standard practice)
+    import os
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", config["mlflow"]["tracking_uri"])
+    mlflow.set_tracking_uri(tracking_uri)
+    print(f"\n   MLflow Tracking URI: {tracking_uri}")
+    
+    # Ensure experiment exists (create if it doesn't)
+    experiment_name = config["mlflow"]["experiment_name"]
+    try:
+        experiment = mlflow.get_experiment_by_name(experiment_name)
+        if experiment is None:
+            experiment_id = mlflow.create_experiment(experiment_name)
+            print(f"   Created new experiment: {experiment_name} (ID: {experiment_id})")
+        else:
+            print(f"   Using existing experiment: {experiment_name} (ID: {experiment.experiment_id})")
+    except Exception as e:
+        # Fallback to set_experiment if get_experiment_by_name fails
+        print(f"   Note: {e}")
+        mlflow.set_experiment(experiment_name)
+    
+    # Set the experiment (this will use existing or create new)
+    mlflow.set_experiment(experiment_name)
 
     print("=" * 60)
     print("Heart Disease Classification - Model Training")
