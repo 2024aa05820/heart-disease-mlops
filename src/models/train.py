@@ -365,10 +365,9 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
     try:
         import time
         from mlflow.tracking import MlflowClient
-        from mlflow.exceptions import MlflowException
 
         # Wait for model registration to complete
-        print(f"   Waiting for model registration to complete...")
+        print("   Waiting for model registration to complete...")
         time.sleep(5)  # Increased wait time
 
         # Create a fresh client instance for stage transition
@@ -424,15 +423,15 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
                 print(f"   ℹ️  Load with: models:/{registered_model_name}@champion")
             except Exception as alias_error:
                 print(f"   ⚠️  Could not set alias: {alias_error}")
-                print(f"   ℹ️  Model is still registered and tagged as 'best_model=true'")
+                print("   ℹ️  Model is still registered and tagged as 'best_model=true'")
         else:
             print(f"   ⚠️  No versions found for {registered_model_name}")
-            print(f"   Model registration may still be in progress.")
-            print(f"   Check MLflow UI in a few moments.")
+            print("   Model registration may still be in progress.")
+            print("   Check MLflow UI in a few moments.")
 
     except Exception as e:
         print(f"   ⚠️  Error during model promotion: {type(e).__name__}: {str(e)[:100]}")
-        print(f"   ℹ️  Model should still be registered in MLflow.")
+        print("   ℹ️  Model should still be registered in MLflow.")
         print(f"   ℹ️  Check MLflow UI → Models tab → '{registered_model_name}'")
 
     # Save best model and preprocessor
