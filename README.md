@@ -58,59 +58,37 @@ Predict heart disease risk in patients based on clinical features using machine 
 ### High-Level Architecture
 
 ```mermaid
-graph TB
-    subgraph DEV_GRP["🔧 Development"]
-        DEV["👤 Developer"] -->|Push Code| GIT["📦 GitHub Repository"]
+flowchart TB
+    subgraph DEV["Development"]
+        direction TB
+        D1[Developer] -->|Push Code| D2[GitHub Repository]
     end
     
-    subgraph CICD["⚙️ CI/CD Pipeline"]
-        GIT -->|Webhook| GA["🔄 GitHub Actions"]
-        GIT -->|Webhook| JEN["🔨 Jenkins"]
-        GA -->|Build Image| DOCKER["🐳 Docker Image"]
-        JEN -->|Deploy| K8S["☸️ Kubernetes"]
+    subgraph CICD["CI/CD Pipeline"]
+        direction TB
+        C1[GitHub Actions] -->|Build| C2[Docker Image]
+        C3[Jenkins] -->|Deploy| C4[Kubernetes]
     end
     
-    subgraph ML["🤖 ML Pipeline"]
-        DATA["📊 Raw Data"] -->|Preprocess| TRAIN["🎓 Model Training"]
-        TRAIN -->|Log Metrics| MLFLOW["📈 MLflow Tracking"]
-        MLFLOW -->|Register Model| REGISTRY["📋 Model Registry"]
-        REGISTRY -->|Load Model| API["🚀 API Service"]
+    subgraph ML["ML Pipeline"]
+        direction TB
+        M1[Raw Data] -->|Process| M2[Training]
+        M2 -->|Log| M3[MLflow]
+        M3 -->|Register| M4[Model Registry]
     end
     
-    subgraph K8S_GRP["☸️ Kubernetes Cluster"]
-        K8S -->|Deploy| API
-        API -->|Expose Metrics| PROM["📊 Prometheus"]
-        PROM -->|Query| GRAF["📉 Grafana"]
+    subgraph K8S["Kubernetes Cluster"]
+        direction TB
+        K1[API Service] -->|Metrics| K2[Prometheus]
+        K2 -->|Query| K3[Grafana]
     end
     
-    subgraph MON_GRP["👁️ Monitoring"]
-        PROM -->|Scrape| API
-        GRAF -->|Visualize| DASH["📊 Grafana Dashboards"]
-    end
+    D2 -->|Trigger| C1
+    D2 -->|Webhook| C3
+    M4 -->|Load| K1
+    C4 -->|Deploy| K1
     
-    USER["👥 End User"] -->|HTTP Requests| API
-    API -->|Predictions| USER
-    
-    style DEV_GRP fill:#BBDEFB,stroke:#1976D2,stroke-width:3px,color:#000000
-    style CICD fill:#FFE0B2,stroke:#F57C00,stroke-width:3px,color:#000000
-    style ML fill:#C8E6C9,stroke:#388E3C,stroke-width:3px,color:#000000
-    style K8S_GRP fill:#90CAF9,stroke:#1976D2,stroke-width:3px,color:#000000
-    style MON_GRP fill:#E1BEE7,stroke:#7B1FA2,stroke-width:3px,color:#000000
-    style USER fill:#FFCDD2,stroke:#C62828,stroke-width:3px,color:#000000
-    style DEV fill:#FFFFFF,stroke:#1976D2,stroke-width:2px,color:#000000
-    style GIT fill:#FFFFFF,stroke:#1976D2,stroke-width:2px,color:#000000
-    style GA fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
-    style JEN fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
-    style DOCKER fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
-    style K8S fill:#FFFFFF,stroke:#1976D2,stroke-width:2px,color:#000000
-    style DATA fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
-    style TRAIN fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
-    style MLFLOW fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
-    style REGISTRY fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
-    style API fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
-    style PROM fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
-    style GRAF fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
-    style DASH fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
+    U[End User] <-->|Predictions| K1
 ```
 
 ### Component Interaction Flow
@@ -155,48 +133,34 @@ sequenceDiagram
 ### Deployment Architecture
 
 ```mermaid
-graph TB
-    subgraph K8S["☸️ Kubernetes Namespace: default"]
-        subgraph APP["🚀 Application Layer"]
-            API1["📦 API Pod 1"]
-            API2["📦 API Pod 2"]
-            API_SVC["🔌 API Service"]
+flowchart TB
+    subgraph K8S["Kubernetes Cluster"]
+        direction TB
+        
+        subgraph ING["Ingress Layer"]
+            I1[Ingress Controller]
         end
         
-        subgraph MON["👁️ Monitoring Stack"]
-            PROM_POD["📊 Prometheus Pod"]
-            PROM_SVC["📊 Prometheus Service"]
-            GRAF_POD["📉 Grafana Pod"]
-            GRAF_SVC["📉 Grafana Service"]
+        subgraph APP["Application Layer"]
+            A1[API Service]
+            A2[Pod 1]
+            A3[Pod 2]
         end
         
-        subgraph ING_GRP["🌐 Ingress"]
-            ING["🔀 Ingress Controller"]
+        subgraph MON["Monitoring Layer"]
+            P1[Prometheus]
+            G1[Grafana]
         end
+        
+        I1 --> A1
+        A1 --> A2
+        A1 --> A3
+        P1 -->|Scrape| A2
+        P1 -->|Scrape| A3
+        G1 -->|Query| P1
     end
     
-    USER["👥 Users"] -->|HTTP| ING
-    ING -->|Route| API_SVC
-    API_SVC -->|Load Balance| API1
-    API_SVC -->|Load Balance| API2
-    
-    PROM_POD -->|Scrape| API1
-    PROM_POD -->|Scrape| API2
-    GRAF_POD -->|Query| PROM_SVC
-    
-    style K8S fill:#E3F2FD,stroke:#1976D2,stroke-width:4px,color:#000000
-    style APP fill:#E8F5E9,stroke:#388E3C,stroke-width:4px,color:#000000
-    style MON fill:#FFF3E0,stroke:#F57C00,stroke-width:4px,color:#000000
-    style ING_GRP fill:#F3E5F5,stroke:#7B1FA2,stroke-width:4px,color:#000000
-    style USER fill:#FFEBEE,stroke:#C62828,stroke-width:3px,color:#000000
-    style API1 fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
-    style API2 fill:#FFFFFF,stroke:#388E3C,stroke-width:2px,color:#000000
-    style API_SVC fill:#FFFFFF,stroke:#2E7D32,stroke-width:2px,color:#000000
-    style PROM_POD fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
-    style PROM_SVC fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
-    style GRAF_POD fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
-    style GRAF_SVC fill:#FFFFFF,stroke:#F57C00,stroke-width:2px,color:#000000
-    style ING fill:#FFFFFF,stroke:#7B1FA2,stroke-width:2px,color:#000000
+    U[Users] -->|HTTP| I1
 ```
 
 ---
@@ -294,26 +258,14 @@ make download
 The project uses GitHub Actions for automated CI/CD with the following workflow:
 
 ```mermaid
-graph TB
-    subgraph GA_PIPELINE["🔄 GitHub Actions CI/CD Pipeline"]
-        A["📤 Push to GitHub"] --> B["🔍 Lint Code"]
-        B --> C["🧪 Run Tests"]
-        C --> D["🤖 Train Models"]
-        D --> E["🐳 Build Docker Image"]
-        E --> F["✅ Test Container"]
-        F --> G["📦 Upload Artifact"]
-        G --> H["🚀 Deploy to K8s"]
-    end
-    
-    style GA_PIPELINE fill:#BBDEFB,stroke:#0277BD,stroke-width:4px,color:#000000
-    style A fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
-    style B fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style C fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style D fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style E fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style F fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style G fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
-    style H fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
+flowchart TB
+    A[Push to GitHub] --> B[Lint Code]
+    B --> C[Run Tests]
+    C --> D[Train Models]
+    D --> E[Build Docker]
+    E --> F[Test Container]
+    F --> G[Upload Artifact]
+    G --> H[Deploy to K8s]
 ```
 
 **Workflow File**: `.github/workflows/ci.yml`
@@ -345,26 +297,14 @@ Jenkins provides full automation with GitHub webhooks for deployment.
 **Pipeline File**: `Jenkinsfile`
 
 ```mermaid
-graph TB
-    subgraph JEN_PIPELINE["🔨 Jenkins CI/CD Pipeline"]
-        A["🔔 GitHub Webhook<br/>(PR Merge)"] --> B["📥 Checkout Code"]
-        B --> C["🐍 Setup Python"]
-        C --> D["🔍 Lint & Test"]
-        D --> E["🤖 Train Models"]
-        E --> F["🐳 Build Docker Image"]
-        F --> G["☸️ Deploy to Minikube"]
-        G --> H["✅ Verify Deployment"]
-    end
-    
-    style JEN_PIPELINE fill:#FFE0B2,stroke:#F57C00,stroke-width:4px,color:#000000
-    style A fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
-    style B fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style C fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style D fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style E fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style F fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style G fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
-    style H fill:#FFFFFF,stroke:#2E7D32,stroke-width:3px,color:#000000
+flowchart TB
+    A[PR Merge Webhook] --> B[Checkout Code]
+    B --> C[Setup Python]
+    C --> D[Lint & Test]
+    D --> E[Train Models]
+    E --> F[Build Docker]
+    F --> G[Deploy to K8s]
+    G --> H[Verify Deployment]
 ```
 
 **Setup Jenkins:**
@@ -414,22 +354,17 @@ sudo systemctl restart jenkins
 Combines GitHub Actions (build) with Jenkins (deploy) for best of both worlds:
 
 ```mermaid
-graph TB
-    subgraph HYBRID["🔀 Hybrid CI/CD Pipeline"]
-        A["📤 Push Code"] --> B["🔄 GitHub Actions<br/>(Build)"]
-        B --> C["🐳 Build Docker Image"]
-        C --> D["📦 Upload Artifact"]
-        D --> E["🔨 Jenkins Downloads<br/>(Deploy)"]
-        E --> F["☸️ Deploy to K8s"]
+flowchart TB
+    subgraph GHA["GitHub Actions - Build"]
+        A[Push Code] --> B[Build Docker]
+        B --> C[Upload Artifact]
     end
     
-    style HYBRID fill:#BBDEFB,stroke:#0277BD,stroke-width:4px,color:#000000
-    style A fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
-    style B fill:#FFFFFF,stroke:#0D47A1,stroke-width:3px,color:#000000
-    style C fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style D fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style E fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style F fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
+    subgraph JEN["Jenkins - Deploy"]
+        D[Download Artifact] --> E[Deploy to K8s]
+    end
+    
+    C --> D
 ```
 
 **Benefits:**
@@ -472,26 +407,14 @@ http://your-server-ip:8080
 ### Training Pipeline
 
 ```mermaid
-graph TB
-    subgraph ML_TRAIN["🤖 ML Training Pipeline"]
-        A["📊 Raw Data"] --> B["🔧 Data Preprocessing"]
-        B --> C["✂️ Train/Test Split"]
-        C --> D["🎓 Train Models"]
-        D --> E["📈 Evaluate Models"]
-        E --> F["🏆 Select Best Model"]
-        F --> G["📋 Register in MLflow"]
-        G --> H["⭐ Tag as Champion"]
-    end
-    
-    style ML_TRAIN fill:#C8E6C9,stroke:#388E3C,stroke-width:4px,color:#000000
-    style A fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
-    style B fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style C fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style D fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style E fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style F fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style G fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
-    style H fill:#FFFFFF,stroke:#C2185B,stroke-width:3px,color:#000000
+flowchart TB
+    A[Raw Data] --> B[Preprocessing]
+    B --> C[Train/Test Split]
+    C --> D[Train Models]
+    D --> E[Evaluate]
+    E --> F[Select Best]
+    F --> G[Register MLflow]
+    G --> H[Tag Champion]
 ```
 
 ### Training Models
@@ -563,37 +486,19 @@ mlflow experiments list
 ### Deployment Options
 
 ```mermaid
-graph TB
-    subgraph DEPLOY_OPT["🚀 Deployment Options"]
-        A["🎯 Deployment Options"] --> B["💻 Local Development"]
-        A --> C["🐳 Docker"]
-        A --> D["☸️ Kubernetes"]
-        A --> E["⚙️ CI/CD Automated"]
-        
-        B --> B1["uvicorn"]
-        C --> C1["Docker Run"]
-        C --> C2["Docker Compose"]
-        D --> D1["Minikube"]
-        D --> D2["Cloud K8s"]
-        E --> E1["GitHub Actions"]
-        E --> E2["Jenkins"]
-        E --> E3["Hybrid"]
-    end
+flowchart TB
+    A[Deployment] --> B[Local]
+    A --> C[Docker]
+    A --> D[Kubernetes]
+    A --> E[CI/CD]
     
-    style DEPLOY_OPT fill:#BBDEFB,stroke:#0277BD,stroke-width:4px,color:#000000
-    style A fill:#FFFFFF,stroke:#0D47A1,stroke-width:3px,color:#000000
-    style B fill:#FFFFFF,stroke:#388E3C,stroke-width:3px,color:#000000
-    style C fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style D fill:#FFFFFF,stroke:#1565C0,stroke-width:3px,color:#000000
-    style E fill:#FFFFFF,stroke:#7B1FA2,stroke-width:3px,color:#000000
-    style B1 fill:#FFFFFF,stroke:#2E7D32,stroke-width:2px,color:#000000
-    style C1 fill:#FFFFFF,stroke:#E65100,stroke-width:2px,color:#000000
-    style C2 fill:#FFFFFF,stroke:#E65100,stroke-width:2px,color:#000000
-    style D1 fill:#FFFFFF,stroke:#0D47A1,stroke-width:2px,color:#000000
-    style D2 fill:#FFFFFF,stroke:#0D47A1,stroke-width:2px,color:#000000
-    style E1 fill:#FFFFFF,stroke:#4A148C,stroke-width:2px,color:#000000
-    style E2 fill:#FFFFFF,stroke:#4A148C,stroke-width:2px,color:#000000
-    style E3 fill:#FFFFFF,stroke:#4A148C,stroke-width:2px,color:#000000
+    B --> B1[uvicorn]
+    C --> C1[docker run]
+    C --> C2[docker-compose]
+    D --> D1[Minikube]
+    D --> D2[Cloud K8s]
+    E --> E1[GitHub Actions]
+    E --> E2[Jenkins]
 ```
 
 ### 1. Local Development
@@ -714,23 +619,13 @@ kubectl port-forward service/grafana 3000:3000
 ### Monitoring Stack
 
 ```mermaid
-graph TB
-    subgraph MON_STACK["👁️ Monitoring Stack"]
-        API["🚀 API Service"] -->|Expose /metrics| PROM["📊 Prometheus"]
-        PROM -->|Scrape Metrics| API
-        PROM -->|Query| GRAF["📉 Grafana"]
-        GRAF -->|Visualize| DASH["📊 Dashboards"]
-        PROM -->|Evaluate| ALERT["🚨 Alert Rules"]
-        ALERT -->|Trigger| NOTIFY["📢 Notifications"]
-    end
-    
-    style MON_STACK fill:#E1BEE7,stroke:#7B1FA2,stroke-width:4px,color:#000000
-    style API fill:#FFFFFF,stroke:#2E7D32,stroke-width:3px,color:#000000
-    style PROM fill:#FFFFFF,stroke:#F57C00,stroke-width:3px,color:#000000
-    style GRAF fill:#FFFFFF,stroke:#1976D2,stroke-width:3px,color:#000000
-    style DASH fill:#FFFFFF,stroke:#1565C0,stroke-width:3px,color:#000000
-    style ALERT fill:#FFFFFF,stroke:#C62828,stroke-width:3px,color:#000000
-    style NOTIFY fill:#FFFFFF,stroke:#B71C1C,stroke-width:3px,color:#000000
+flowchart TB
+    API[API Service] -->|/metrics| PROM[Prometheus]
+    PROM -->|Scrape| API
+    PROM -->|Query| GRAF[Grafana]
+    GRAF --> DASH[Dashboards]
+    PROM -->|Evaluate| ALERT[Alert Rules]
+    ALERT -->|Trigger| NOTIFY[Notifications]
 ```
 
 ### Prometheus
