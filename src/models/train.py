@@ -221,7 +221,7 @@ def train_and_log_model(
         # Verify run is active
         run_id = run.info.run_id
         print(f"\n   Starting MLflow run: {run_id} ({model_name})")
-        
+
         # Get model
         model = get_model(model_name, config)
 
@@ -254,11 +254,13 @@ def train_and_log_model(
                 print(f"      ✅ {metric_name}: {metric_value:.4f}")
             except Exception as e:
                 print(f"      ❌ Failed to log {metric_name}: {e}")
-        
+
         # Verify metrics were logged
         if len(logged_metrics) != len(metrics):
-            print(f"   ⚠️  Warning: Only {len(logged_metrics)}/{len(metrics)} metrics logged")
-        
+            print(
+                f"   ⚠️  Warning: Only {len(logged_metrics)}/{len(metrics)} metrics logged"
+            )
+
         # Also log as batch (backup method) - this is redundant but ensures compatibility
         try:
             mlflow.log_metrics(metrics)
@@ -313,10 +315,11 @@ def train_and_log_model(
         print(
             f"CV Accuracy: {metrics['cv_accuracy_mean']:.4f} (+/- {metrics['cv_accuracy_std']:.4f})"
         )
-        
+
         # Verify metrics were logged to MLflow
         try:
             from mlflow.tracking import MlflowClient
+
             client = MlflowClient()
             run_metrics = client.get_run(run_id).data.metrics
             print(f"\n   ✅ Verified: {len(run_metrics)} metrics logged to MLflow")
@@ -347,10 +350,11 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
 
     # Setup MLflow - check environment variable first (standard practice)
     import os
+
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", config["mlflow"]["tracking_uri"])
     mlflow.set_tracking_uri(tracking_uri)
     print(f"\n   MLflow Tracking URI: {tracking_uri}")
-    
+
     # Ensure experiment exists (create if it doesn't)
     experiment_name = config["mlflow"]["experiment_name"]
     try:
@@ -359,12 +363,14 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
             experiment_id = mlflow.create_experiment(experiment_name)
             print(f"   Created new experiment: {experiment_name} (ID: {experiment_id})")
         else:
-            print(f"   Using existing experiment: {experiment_name} (ID: {experiment.experiment_id})")
+            print(
+                f"   Using existing experiment: {experiment_name} (ID: {experiment.experiment_id})"
+            )
     except Exception as e:
         # Fallback to set_experiment if get_experiment_by_name fails
         print(f"   Note: {e}")
         mlflow.set_experiment(experiment_name)
-    
+
     # Set the experiment (this will use existing or create new)
     mlflow.set_experiment(experiment_name)
 
