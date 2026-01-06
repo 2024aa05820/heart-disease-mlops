@@ -59,38 +59,50 @@ Predict heart disease risk in patients based on clinical features using machine 
 
 ```mermaid
 flowchart TB
-    %% Development
-    DEV[Developer] -->|1. Push Code| GH[GitHub]
-    
-    %% CI/CD triggers ML Pipeline
-    GH -->|2. Trigger| GA[GitHub Actions]
-    GH -->|2. Webhook| JEN[Jenkins]
-    
-    %% ML Pipeline integrated with CI/CD
-    GA -->|3. Process Data| DATA[Raw Data]
-    DATA -->|4. Train| TRAIN[Model Training]
-    TRAIN -->|5. Log Metrics| MLF[MLflow]
-    MLF -->|6. Register| REG[Model Registry]
-    
-    %% Build and Deploy
-    GA -->|7. Build| IMG[Docker Image]
-    REG -->|8. Include Model| IMG
-    JEN -->|9. Deploy| K8S[Kubernetes]
-    IMG -->|10. Push| K8S
-    
-    %% Kubernetes Services
-    subgraph CLUSTER["Kubernetes Cluster"]
+    subgraph DEV["Development"]
+        D1[Developer]
+    end
+
+    subgraph GH["GitHub"]
+        REPO[Repository]
+        PR[Pull Request]
+    end
+
+    subgraph CI["GitHub Actions - CI"]
+        GA1[Lint Code]
+        GA2[Run Tests]
+        GA3[Train Model]
+        GA4[Build Docker]
+        GA5[Test Container]
+        GA1 --> GA2 --> GA3 --> GA4 --> GA5
+    end
+
+    subgraph CD["Jenkins - CD Production"]
+        J1[Checkout]
+        J2[Setup & Test]
+        J3[Train Models]
+        J4[MLflow Registry]
+        J5[Build Docker]
+        J6[Deploy to K8s]
+        J7[Verify]
+        J1 --> J2 --> J3 --> J4 --> J5 --> J6 --> J7
+    end
+
+    subgraph K8S["Kubernetes Cluster"]
         API[API Service]
         PROM[Prometheus]
         GRAF[Grafana]
+        API --> PROM --> GRAF
     end
+
+    D1 -->|1. Create PR| PR
+    PR -->|2. Trigger CI| GA1
+    GA5 -->|3. PR Approved| PR
+    PR -->|4. Merge to Main| REPO
+    REPO -->|5. Webhook| J1
+    J6 --> API
     
-    K8S --> API
-    API -->|Metrics| PROM
-    PROM -->|Visualize| GRAF
-    
-    %% End User
-    USER[End User] <-->|11. Predictions| API
+    USER[End User] <-->|Predictions| API
 ```
 
 ### Component Interaction Flow
@@ -99,37 +111,46 @@ flowchart TB
 sequenceDiagram
     participant Dev as Developer
     participant GH as GitHub
-    participant GA as GitHub Actions
-    participant J as Jenkins
+    participant GA as GitHub Actions CI
+    participant J as Jenkins CD
+    participant MLF as MLflow
     participant K8s as Kubernetes
     participant API as API Service
-    participant Prom as Prometheus
-    participant Graf as Grafana
+    participant Mon as Prometheus/Grafana
     participant User as End User
     
-    Dev->>GH: Create PR
-    GH->>GA: Trigger Workflow (on PR)
-    GA->>GA: Lint & Test
-    GA->>GA: Train Models
-    GA->>GA: Build Docker Image
-    GA->>GA: Upload Artifact
+    rect rgb(230, 245, 255)
+        Note over Dev,GA: CI Pipeline - Pull Request
+        Dev->>GH: 1. Create Pull Request
+        GH->>GA: 2. Trigger CI Workflow
+        GA->>GA: 3. Lint Code (ruff, black)
+        GA->>GA: 4. Run Tests (pytest)
+        GA->>GA: 5. Train Model
+        GA->>GA: 6. Build & Test Docker
+        GA-->>GH: 7. CI Passed ✓
+    end
     
-    Dev->>GH: Merge PR to main
-    GH->>J: Webhook Trigger (PR Merge)
-    J->>J: Checkout main branch
-    J->>J: Train Models
-    J->>J: Build Docker Image
-    J->>K8s: Deploy to Cluster
-    K8s->>API: Start Pods
+    rect rgb(255, 243, 224)
+        Note over Dev,J: CD Pipeline - Production
+        Dev->>GH: 8. Merge PR to main
+        GH->>J: 9. Webhook Trigger
+        J->>J: 10. Checkout & Setup
+        J->>J: 11. Train Models
+        J->>MLF: 12. Log Metrics & Register
+        MLF-->>J: 13. Model Registered
+        J->>J: 14. Build Docker Image
+        J->>K8s: 15. Deploy to Kubernetes
+        K8s->>API: 16. Start API Pods
+        J->>J: 17. Verify Deployment
+    end
     
-    User->>API: POST /predict
-    API->>API: Load Model
-    API->>User: Return Prediction
-    
-    API->>Prom: Expose /metrics
-    Prom->>Prom: Scrape Metrics
-    Prom->>Graf: Provide Data
-    Graf->>Graf: Render Dashboards
+    rect rgb(232, 245, 233)
+        Note over User,Mon: Production Usage
+        User->>API: POST /predict
+        API-->>User: Prediction Response
+        API->>Mon: Expose /metrics
+        Mon->>Mon: Visualize Dashboards
+    end
 ```
 
 ### Deployment Architecture
@@ -255,20 +276,24 @@ make download
 
 ## 🔄 CI/CD Pipelines
 
-### GitHub Actions Pipeline
+### GitHub Actions Pipeline (CI)
 
-The project uses GitHub Actions for automated CI/CD with the following workflow:
+GitHub Actions handles **Continuous Integration** - runs on every Pull Request:
 
 ```mermaid
-flowchart TB
-    A[Push to GitHub] --> B[Lint Code]
-    B --> C[Run Tests]
-    C --> D[Train Models]
-    D --> E[Build Docker]
-    E --> F[Test Container]
-    F --> G[Upload Artifact]
-    G --> H[Deploy to K8s]
+flowchart LR
+    subgraph PR["On Pull Request"]
+        A[Lint] --> B[Test] --> C[Train] --> D[Docker] --> E[Upload]
+    end
 ```
+
+**Jobs:**
+| Job | Description |
+|-----|-------------|
+| **lint** | Run ruff linter, black formatter check |
+| **test** | Run pytest with coverage report |
+| **train** | Download data, train models, upload artifacts |
+| **docker** | Build image, test container, save artifact |
 
 **Workflow File**: `.github/workflows/ci.yml`
 
@@ -294,20 +319,33 @@ git push origin main
 
 Jenkins provides full automation with GitHub webhooks for deployment.
 
-#### Jenkins Standard Pipeline
+#### Jenkins Standard Pipeline (CD)
+
+Jenkins handles **Continuous Deployment** - triggers on PR merge to main:
 
 **Pipeline File**: `Jenkinsfile`
 
 ```mermaid
-flowchart TB
-    A[PR Merge Webhook] --> B[Checkout Code]
-    B --> C[Setup Python]
-    C --> D[Lint & Test]
-    D --> E[Train Models]
-    E --> F[Build Docker]
-    F --> G[Deploy to K8s]
-    G --> H[Verify Deployment]
+flowchart LR
+    subgraph JENKINS["On PR Merge to Main"]
+        A[Checkout] --> B[Setup] --> C[Lint/Test] --> D[Train]
+        D --> E[MLflow] --> F[Docker] --> G[Deploy] --> H[Verify]
+    end
 ```
+
+**Stages:**
+| Stage | Description |
+|-------|-------------|
+| **Checkout** | Clone repo, verify main branch |
+| **Setup Python** | Create venv, install dependencies |
+| **Lint & Test** | Run ruff, black, pytest |
+| **Train Models** | Download data, train, verify models |
+| **Promote Model** | Register best model in MLflow |
+| **Build Docker** | Build image with trained model |
+| **Test Docker** | Run container health check |
+| **Deploy to K8s** | Apply manifests, rollout restart |
+| **Verify** | Test API endpoints in cluster |
+| **Start MLflow** | Start MLflow UI on port 5001 |
 
 **Setup Jenkins:**
 
