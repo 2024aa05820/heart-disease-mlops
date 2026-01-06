@@ -16,24 +16,9 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo '📥 Checking out code from GitHub...'
-                script {
-                    // Only proceed if on main branch (after PR merge)
-                    def branch = env.BRANCH_NAME ?: sh(
-                        script: 'git rev-parse --abbrev-ref HEAD',
-                        returnStdout: true
-                    ).trim()
-                    
-                    if (branch != 'main' && branch != 'master') {
-                        echo "⚠️  Branch '${branch}' is not main. Skipping pipeline."
-                        echo "This pipeline only runs on main branch after PR merge."
-                        currentBuild.result = 'ABORTED'
-                        return
-                    }
-                    
-                    echo "✅ Building branch: ${branch}"
-                }
                 checkout scm
                 sh 'git log -1 --pretty=format:"%h - %an: %s"'
+                echo '✅ Code checkout completed'
             }
         }
         
