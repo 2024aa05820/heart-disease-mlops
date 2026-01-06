@@ -96,14 +96,15 @@ def evaluate_model(
     y_prob = model.predict_proba(X_test)[:, 1]
 
     # Calculate metrics
+    # Convert all metrics to Python floats to avoid serialization issues
     metrics = {
-        "cv_accuracy_mean": cv_scores.mean(),
-        "cv_accuracy_std": cv_scores.std(),
-        "test_accuracy": accuracy_score(y_test, y_pred),
-        "precision": precision_score(y_test, y_pred),
-        "recall": recall_score(y_test, y_pred),
-        "f1_score": f1_score(y_test, y_pred),
-        "roc_auc": roc_auc_score(y_test, y_prob),
+        "cv_accuracy_mean": float(cv_scores.mean()),
+        "cv_accuracy_std": float(cv_scores.std()),
+        "test_accuracy": float(accuracy_score(y_test, y_pred)),
+        "precision": float(precision_score(y_test, y_pred)),
+        "recall": float(recall_score(y_test, y_pred)),
+        "f1_score": float(f1_score(y_test, y_pred)),
+        "roc_auc": float(roc_auc_score(y_test, y_prob)),
     }
 
     return metrics
@@ -359,28 +360,63 @@ def train_all_models(config_path: str = "src/config/config.yaml"):
     print("\n   Promoting best model to Production stage...")
     try:
         from mlflow.tracking import MlflowClient
+        from mlflow.entities.model_registry import ModelVersion
+        import time
+
         client = MlflowClient()
 
         # Get the registered model name
         registered_model_name = f"heart-disease-{best_model_name}"
 
-        # Get the latest version of the best model
-        latest_versions = client.get_latest_versions(registered_model_name, stages=["None"])
-        if latest_versions:
-            latest_version = latest_versions[0].version
+        # Wait a moment for the model registration to complete
+        print(f"   Waiting for model registration to complete...")
+        time.sleep(3)
 
-            # Transition to Production
-            client.transition_model_version_stage(
-                name=registered_model_name,
-                version=latest_version,
-                stage="Production",
-                archive_existing_versions=True
-            )
-            print(f"   ✅ Model {registered_model_name} v{latest_version} promoted to Production")
+        # Get all versions of the best model using search
+        print(f"   Searching for model versions of '{registered_model_name}'...")
+        all_versions = client.search_model_versions(f"name='{registered_model_name}'")
+
+        if all_versions:
+            # Sort by version number (descending) to get the latest
+            all_versions.sort(key=lambda x: int(x.version), reverse=True)
+            latest_version_obj = all_versions[0]
+            latest_version = latest_version_obj.version
+
+            print(f"   Found version {latest_version}, current stage: {latest_version_obj.current_stage}")
+
+            # Only transition if not already in Production
+            if latest_version_obj.current_stage != "Production":
+                # Archive existing Production versions first
+                production_versions = client.get_latest_versions(
+                    registered_model_name,
+                    stages=["Production"]
+                )
+                for pv in production_versions:
+                    print(f"   Archiving previous Production version {pv.version}...")
+                    client.transition_model_version_stage(
+                        name=registered_model_name,
+                        version=pv.version,
+                        stage="Archived"
+                    )
+
+                # Now transition the new version to Production
+                print(f"   Transitioning version {latest_version} to Production...")
+                client.transition_model_version_stage(
+                    name=registered_model_name,
+                    version=latest_version,
+                    stage="Production"
+                )
+                print(f"   ✅ Model {registered_model_name} v{latest_version} promoted to Production")
+            else:
+                print(f"   ℹ️  Model {registered_model_name} v{latest_version} already in Production")
         else:
             print(f"   ⚠️  No versions found for {registered_model_name}")
+            print(f"   This might mean the model registration is still in progress.")
+            print(f"   You can manually promote it later using MLflow UI.")
     except Exception as e:
-        print(f"   ⚠️  Could not promote model to Production: {e}")
+        print(f"   ⚠️  Could not promote model to Production: {type(e).__name__}: {e}")
+        print(f"   The model was registered successfully, but stage transition failed.")
+        print(f"   You can manually set the stage to 'Production' in the MLflow UI.")
 
     # Save best model and preprocessor
     print("\n6. Saving artifacts...")
