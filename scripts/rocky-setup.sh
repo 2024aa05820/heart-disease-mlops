@@ -6,10 +6,44 @@
 # - Java 17, Docker, kubectl, Minikube, Jenkins, Python, Tools
 #
 # Usage:
-#   sudo ./scripts/rocky-setup.sh
+#   sudo ./scripts/rocky-setup.sh              # Will prompt for system update
+#   sudo ./scripts/rocky-setup.sh --skip-update # Skip system update
+#   sudo ./scripts/rocky-setup.sh --update      # Force system update
 #
 
 set -e
+
+# Parse command line arguments
+SKIP_UPDATE=false
+FORCE_UPDATE=false
+
+for arg in "$@"; do
+    case $arg in
+        --skip-update)
+            SKIP_UPDATE=true
+            shift
+            ;;
+        --update)
+            FORCE_UPDATE=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: sudo $0 [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --skip-update    Skip system update (faster)"
+            echo "  --update         Force system update"
+            echo "  --help, -h       Show this help message"
+            echo ""
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 # Ensure /usr/local/bin is in PATH
 export PATH="/usr/local/bin:$PATH"
@@ -37,11 +71,32 @@ ACTUAL_USER=${SUDO_USER:-$USER}
 echo -e "${BLUE}Installing for user: $ACTUAL_USER${NC}"
 echo ""
 
-# Update system
-echo -e "${YELLOW}📦 Updating system...${NC}"
-dnf update -y
+# Handle system update based on flags
+if [ "$FORCE_UPDATE" = true ]; then
+    echo -e "${YELLOW}📦 Updating system (forced)...${NC}"
+    dnf update -y
+    echo -e "${GREEN}✅ System updated${NC}"
+elif [ "$SKIP_UPDATE" = true ]; then
+    echo -e "${YELLOW}⏭️  Skipping system update (--skip-update flag)${NC}"
+else
+    # Ask if user wants to update system
+    echo -e "${YELLOW}Do you want to update the system? (This may take several minutes)${NC}"
+    echo -e "${BLUE}[y/N]:${NC} "
+    read -r UPDATE_SYSTEM
+
+    if [[ "$UPDATE_SYSTEM" =~ ^[Yy]$ ]]; then
+        echo -e "${YELLOW}📦 Updating system...${NC}"
+        dnf update -y
+        echo -e "${GREEN}✅ System updated${NC}"
+    else
+        echo -e "${YELLOW}⏭️  Skipping system update${NC}"
+    fi
+fi
+
+# Install EPEL repository (required for some packages)
+echo -e "${YELLOW}📦 Installing EPEL repository...${NC}"
 dnf install -y epel-release
-echo -e "${GREEN}✅ System updated${NC}"
+echo -e "${GREEN}✅ EPEL repository installed${NC}"
 echo ""
 
 # Install Java 17
